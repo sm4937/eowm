@@ -708,7 +708,7 @@ if p.do_et == 1
     Eyelink('StopRecording');
     Eyelink('ReceiveFile',[p.eyedatafile '.edf'],[p.eyedatafile '.edf']);
     
-    p.eyedatafile_renamed = ['/eyetracking/' p.filename(1:(end-3)) 'edf'];
+    p.eyedatafile_renamed = ['/eyetracking/' p.filename(1:(end-3)) '.edf'];
     % TEST THAT THIS WORKS IN EXPERIMENT ROOM%
     movefile([p.eyedatafile '.edf'],p.eyedatafile_renamed);
     
