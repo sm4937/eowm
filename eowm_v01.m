@@ -24,7 +24,7 @@ function eowm_v01(subj,run,scanner)
 %try
 p.expt_name = 'eowm_v01';
 
-p.do_et = 1;
+p.do_et = 0;
 
 p.TR = 3; % 4x multiband, so measured TR is 0.75, but "TR" for stim is 3
 
@@ -47,7 +47,7 @@ rng(p.rng_seed);
 
 % define geometry of WM stimuli
 % ------ size of relevant stim features, etc ------ %
-p.wm_ecc = 12;     % deg [in behavioral room, max ecc of circle 15 deg]
+p.wm_ecc = 10;     % deg [in behavioral room, max ecc of circle 15 deg]
 p.cue_size = 0.50; % deg, was 0.55 changed by sarah for debugging
 p.wm_size = 0.59;  % deg, size of WM dots
 % was 0.65, changed by Sarah for debugging
@@ -235,6 +235,7 @@ end
 Screen('BlendFunction', w, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 Screen('Preference','TextRenderer',1);
 
+ListenChar(2); %turn matlab keyboard input off
 p.ifi = Screen('GetFlipInterval',w);
 
 % ------------------ generate rects we use later ---------------------- %
@@ -300,9 +301,21 @@ end
 p.wm_ang = p.wm_ang_all(:,p.run+1); %grab run-specific target locations
 p.wm_coords = p.wm_ecc .* [cosd(p.wm_ang) sind(p.wm_ang)];
 
+% draw up a message about which color is which difficulty level
+cond_colors = p.cue_colors(1,1)>0; %magenta is first color, cyan second color
+if cond_colors
+    cond_color_names = {'Pink','Blue'};
+else
+    cond_color_names = {'Blue','Pink'};
+end
+this_message = ['Remember: ' cond_color_names{2} ' - more precise information.'];
+this_message_2 = [cond_color_names{1} ' - less precise information.'];
+
 Screen('FillRect',w,[0 0 0]);
 draw_aperture();
 draw_fixation(p,w);
+DrawFormattedText(w,this_message,'center',p.center(2)-2*p.ppd,p.cue_colors(2,:));
+DrawFormattedText(w,this_message_2,'center',p.center(2)+2*p.ppd,p.cue_colors(1,:));
 Screen('Flip',w);
 
 % check for esc, space.... 
@@ -401,7 +414,7 @@ for tt = 1:p.ntrials
         % check for esc.... 
         [resp] = checkForResp([], p.esc_key); % TODO: maybe turn on/off gaze indicator?
         if resp == -1
-            Screen('CloseAll'); ShowCursor;
+            Screen('CloseAll'); ShowCursor; ListenChar(1);
             if p.do_et == 1
                 Eyelink('StopRecording');
                 Eyelink('ShutDown');
@@ -444,7 +457,7 @@ for tt = 1:p.ntrials
         % check for esc.... 
         [resp] = checkForResp([], p.esc_key); % TODO: maybe turn on/off gaze indicator?
         if resp == -1
-            Screen('CloseAll'); ShowCursor;
+            Screen('CloseAll'); ShowCursor; ListenChar(1);
             if p.do_et == 1
                 Eyelink('StopRecording');
                 Eyelink('ShutDown');
@@ -480,7 +493,7 @@ for tt = 1:p.ntrials
         % check for esc.... 
         [resp] = checkForResp([], p.esc_key); % TODO: maybe turn on/off gaze indicator?
         if resp == -1
-            Screen('CloseAll'); ShowCursor;
+            Screen('CloseAll'); ShowCursor; ListenChar(1);
             if p.do_et == 1
                 Eyelink('StopRecording');
                 Eyelink('ShutDown');
@@ -521,7 +534,7 @@ for tt = 1:p.ntrials
         % check for esc or response key
         [resp] = checkForResp(p.resp_keys, p.esc_key); % TODO: maybe turn on/off gaze indicator?
         if resp == -1
-            Screen('CloseAll'); ShowCursor;
+            Screen('CloseAll'); ShowCursor; ListenChar(1);
             if p.do_et == 1
                 Eyelink('StopRecording');
                 Eyelink('ShutDown');
@@ -581,7 +594,7 @@ for tt = 1:p.ntrials
         % check for esc.... 
         [resp] = checkForResp([], p.esc_key); % TODO: maybe turn on/off gaze indicator?
         if resp == -1
-            Screen('CloseAll'); ShowCursor;
+            Screen('CloseAll'); ShowCursor; ListenChar(1);
             if p.do_et == 1
                 Eyelink('StopRecording');
                 Eyelink('ShutDown');
@@ -609,7 +622,7 @@ for tt = 1:p.ntrials
         % check for esc.... 
         [resp] = checkForResp([], p.esc_key); % TODO: maybe turn on/off gaze indicator?
         if resp == -1
-            Screen('CloseAll'); ShowCursor;
+            Screen('CloseAll'); ShowCursor; ListenChar(1);
             if p.do_et == 1
                 Eyelink('StopRecording');
                 Eyelink('ShutDown');
@@ -643,7 +656,8 @@ for tt = 1:p.ntrials
         % check for esc.... 
         [resp] = checkForResp([], p.esc_key); % TODO: maybe turn on/off gaze indicator?
         if resp == -1
-            Screen('CloseAll'); ShowCursor;
+            Screen('CloseAll'); ShowCursor; ListenChar(1);
+
             if p.do_et==1
                 Eyelink('StopRecording');
                 Eyelink('ShutDown');
@@ -680,7 +694,7 @@ while (GetSecs-end_tmp) < p.end_wait
     if resp == -1
         sca;
         fprintf('ESC pressesd during post-experiment wait time\n');
-        ShowCursor;
+        ShowCursor;ListenChar(1);
         return;
     end
 end
@@ -724,6 +738,7 @@ clear resp;
 
 Screen('CloseAll');
 ShowCursor;
+ListenChar(1);
 % catch
 %    Screen('CloseAll');
 %    ShowCursor;

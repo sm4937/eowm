@@ -1,7 +1,7 @@
 function [] = runInstructions(w,p)
 %runInstructions Display instructions on screen for EOWM task
 % Written by Sarah 01/2021
-continue_message = '\n\n[Press the space bar to continue.]';
+continue_message = '\n\n[Press any button to continue.]';
 Screen('TextFont',w,'Arial');
 Screen('TextSize', w, 25);
 cond_colors = p.cue_colors(1,1)>0; %magenta is first color, cyan second color
@@ -43,7 +43,7 @@ for i = 1:length(instructions_list)
     pause(1);
     resp = 0;
     while resp == 0
-        [resp, ~] = checkForResp(p.space, p.esc_key);
+        [resp, ~] = checkForResp([p.resp_keys KbName('3#') KbName('4$')], p.esc_key);
     end
     resp = 0;
 end
