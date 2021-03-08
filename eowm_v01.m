@@ -24,7 +24,7 @@ function eowm_v01(subj,run,scanner)
 %try
 p.expt_name = 'eowm_v01';
 
-p.do_et = 0;
+p.do_et = 1;
 
 p.TR = 3; % 4x multiband, so measured TR is 0.75, but "TR" for stim is 3
 
@@ -39,7 +39,8 @@ end
 
 p.filename = ['data/subj' num2str(p.subj) '/' p.expt_name '_subj' num2str(p.subj) '_run' num2str(p.run) '_date' datestr(now,30)];
 if p.do_et == 1
-    p.eyedatafile = sprintf('%s_D%02.f',p.subj(1:min(length(p.subj),3)),p.run);
+   % p.eyedatafile = sprintf('%s_D%02.f',p.subj(1:min(length(p.subj),3)),p.run);
+   p.eyedatafile = ['cc' num2str(p.run)];
 end
 
 p.rng_seed = cputime*1000;
@@ -253,7 +254,7 @@ if p.do_et == 1
     el=EyelinkInitDefaults(w);
     
     el.backgroundcolour=p.bg_color(1);  % TODO: fix this?
-    el.calibrationtargetcolour=p.fix_color(1);
+    el.calibrationtargetcolour=200;
     el.calibrationtargetsize=2*p.wm_size;
     el.calibrationtargetwidth=1;
     el.msgfontcolour=p.fix_color(1);
@@ -722,8 +723,7 @@ if p.do_et == 1
     Eyelink('StopRecording');
     Eyelink('ReceiveFile',[p.eyedatafile '.edf'],[p.eyedatafile '.edf']);
     
-    p.eyedatafile_renamed = ['/eyetracking/' p.filename(1:(end-3)) '.edf'];
-    % TEST THAT THIS WORKS IN EXPERIMENT ROOM%
+    p.eyedatafile_renamed = strrep(p.filename,['/subj' num2str(p.subj)],['/subj' num2str(p.subj) '/eyetracking']);
     movefile([p.eyedatafile '.edf'],p.eyedatafile_renamed);
     
     Eyelink('ShutDown');
