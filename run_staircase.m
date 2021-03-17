@@ -7,7 +7,7 @@ function [delta] = run_staircase(history,target_acc,lastdelta)
 %   Try a weighted up/down method where target_acc =
 %   step_size_up/(step_size_up+step_size_down);
 %   a.k.a. step_size_up = target_acc, step_size_down = 1-target_acc;
-mindelta = 5;
+mindelta = 1;
 maxdelta = 179;
 
 ntrials = numel(history); 

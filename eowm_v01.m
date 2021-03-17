@@ -24,7 +24,7 @@ function eowm_v01(subj,run,scanner)
 %try
 p.expt_name = 'eowm_v01';
 
-p.do_et = 0;
+p.do_et = 1;
 
 p.TR = 3; % 4x multiband, so measured TR is 0.75, but "TR" for stim is 3
 
@@ -113,7 +113,7 @@ p.correct_points = 1; p.incorrect_points = 0;
 % shuffle these
 p.rnd_idx = randperm(p.ntrials);
 p.conditions = p.conditions(p.rnd_idx,:);
-p.deltas_all = [30, 15]; %distance from target to test in easy, hard conditions
+p.deltas_all = [30, 7]; %distance from target to test in easy, hard conditions (first trial)
 
 % generate list of WM positions (all around the circle, 360, but no vertical or horizontal meridians)
 % qtmp = floor(4*rand(p.ntrials,1)); % first, pick a quadrant (any quadrant)
@@ -722,8 +722,7 @@ if p.do_et == 1
     Eyelink('StopRecording');
     Eyelink('ReceiveFile',[p.eyedatafile '.edf'],[p.eyedatafile '.edf']);
     
-    p.eyedatafile_renamed = ['/eyetracking/' p.filename(1:(end-3)) '.edf'];
-    % TEST THAT THIS WORKS IN EXPERIMENT ROOM%
+    p.eyedatafile_renamed = [strrep(p.eyedatafile,['/subj' num2str(subj) '/'],['/subj' num2str(subj) '/eyetracking/']) '.edf'];
     movefile([p.eyedatafile '.edf'],p.eyedatafile_renamed);
     
     Eyelink('ShutDown');

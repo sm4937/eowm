@@ -10,7 +10,7 @@ for f = 1:size(data_folders,1) %from existing subj folders, load subject numbers
     subjs(f) = str2num(char(temp(2))); 
 end
 subjs(subjs==99) = []; %ignore debug subject
-subjs = 2:3; %replace here because pilot 1 is a mess anyway
+subjs = 2:4; %replace here because pilot 1 is a mess anyway
 
 data = [];
 for s = 1:length(subjs)
@@ -29,9 +29,9 @@ xticklabels(condlabels)
 title('Overall accuracy by condition')
 
 subplot(2,2,2)
-bar(mean(data.cond_rt))
+bar(nanmean(data.cond_rt))
 hold on
-errorbar(mean(data.cond_rt),nanstd(data.cond_rt)./sqrt(n),'ok')
+errorbar(nanmean(data.cond_rt),nanstd(data.cond_rt)./sqrt(n),'ok')
 xticklabels(condlabels)
 title('Mean RTs by condition')
 
@@ -42,9 +42,9 @@ errorbar(mean(data.accuracy_by_quad),nanstd(data.accuracy_by_quad)./sqrt(n),'ok'
 title('Accuracy by quadrant')
 
 subplot(2,2,4)
-bar(mean(data.rt_by_quad))
+bar(nanmean(data.rt_by_quad))
 hold on
-errorbar(mean(data.rt_by_quad),nanstd(data.rt_by_quad)./sqrt(n),'ok')
+errorbar(nanmean(data.rt_by_quad),nanstd(data.rt_by_quad)./sqrt(n),'ok')
 title('RT by quadrant')
 fig = gcf; fig.Color = 'w';
 
@@ -68,30 +68,35 @@ fig = gcf; fig.Color = 'w';
 for cond = 1:4
     eval(['p = p' num2str(cond) ';'])
     symbol = ['k' get_sig_symbol(p)];
-    plot(cond,70,symbol)
+    plot(cond,150,symbol)
 end
 xtickangle(30)
 ax = gca; ax.FontSize = 14;
 
 subplot(3,1,2)
-fulltc = [nanmean([data.easy_pres_tc_pupil_size data.easy_delay_tc_pupil_size],1);data.hard_pres_tc_pupil_size data.hard_delay_tc_pupil_size];
-xs = [-length(data.easy_pres_tc_pupil_size):-1 0:length(eas
-plot(1:length(data.hard_delay_tc_pupil_size),nanmean(data.hard_delay_tc_pupil_size),'r')
+fulltc = [nanmean([data.easy_pres_tc_pupil_size data.easy_delay_tc_pupil_size],1);nanmean([data.hard_pres_tc_pupil_size data.hard_delay_tc_pupil_size])];
+xs = [(-length(data.easy_pres_tc_pupil_size)+1):0 1:length(data.easy_delay_tc_pupil_size)];
+plot(xs,fulltc(2,:),'r')
 hold on
-plot(1:length(data.easy_delay_tc_pupil_size),nanmean(data.easy_delay_tc_pupil_size),'b')
+plot(xs,fulltc(1,:),'b')
+plot([0 0],ylim,'k--','LineWidth',1.5)
 title('Timecourse of pupil size (correct trials)')
 legend({'Hard','Easy'})
 xlabel('Time (msec)[0 = delay onset]')
 ylabel('Mean pupil size')
+xlim([-500 6500])
 ax = gca; ax.FontSize = 14;
 
 subplot(3,1,3)
-plot(1:length(data.hard_delay_tc_pupil_size_incorrect),nanmean(data.hard_delay_tc_pupil_size_incorrect),'r')
+fulltc = [nanmean([data.easy_pres_tc_pupil_size_incorrect data.easy_delay_tc_pupil_size_incorrect],1);nanmean([data.hard_pres_tc_pupil_size_incorrect data.hard_delay_tc_pupil_size_incorrect])];
+xs = [(-length(data.easy_pres_tc_pupil_size_incorrect)+1):0 1:length(data.easy_delay_tc_pupil_size_incorrect)];
+plot(xs,fulltc(2,:),'r')
 hold on
-plot(1:length(data.easy_delay_tc_pupil_size_incorrect),nanmean(data.easy_delay_tc_pupil_size_incorrect),'b')
+plot(xs,fulltc(1,:),'b')
+plot([0 0],ylim,'k--','LineWidth',1.5)
 title('Timecourse of pupil size (incorrect trials)')
 legend({'Hard','Easy'})
-xlabel('Time')
+xlabel('Time (msec)[0 = delay onset]')
 ylabel('Mean pupil size')
 ax = gca; ax.FontSize = 14;
 
