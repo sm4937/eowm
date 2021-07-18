@@ -24,7 +24,7 @@ function eowm_v01(subj,run,scanner,session)
 %try
 p.expt_name = 'eowm_v01';
 
-p.do_et = 1;
+p.do_et = 0;
 p.session = session;
 
 p.TR = 3; % 4x multiband, so measured TR is 0.75, but "TR" for stim is 3
@@ -300,7 +300,8 @@ else %practice run already ran
     p.deltas_all = old_p.deltas_all; p.cue_colors = old_p.cue_colors; %keep counterbalancing of hard/easy colors/deltas
     p.wm_ang_all = old_p.wm_ang_all; %retain shuffle of WM target positions
 end
-p.wm_ang = p.wm_ang_all(:,p.run+1); %grab run-specific target locations
+%p.wm_ang = p.wm_ang_all(:,p.run+1+10*(p.session==2)); %grab run-specific target locations, adjusting for session #
+p.wm_ang = p.wm_ang_all(:,p.run+1);
 p.wm_coords = p.wm_ecc .* [cosd(p.wm_ang) sind(p.wm_ang)];
 
 % draw up a message about which color is which difficulty level
