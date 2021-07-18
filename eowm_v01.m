@@ -19,12 +19,13 @@
 % 6. Post-feedback
 % 7. ITI
 
-function eowm_v01(subj,run,scanner)
+function eowm_v01(subj,run,scanner,session)
 
 %try
 p.expt_name = 'eowm_v01';
 
 p.do_et = 1;
+p.session = session;
 
 p.TR = 3; % 4x multiband, so measured TR is 0.75, but "TR" for stim is 3
 
@@ -37,9 +38,10 @@ if ~exist(['./data/subj' num2str(subj)],'dir')
     mkdir(['./data/subj' num2str(subj) '/eyetracking']);
 end
 
-p.filename = ['data/subj' num2str(p.subj) '/' p.expt_name '_subj' num2str(p.subj) '_run' num2str(p.run) '_date' datestr(now,30)];
+p.filename = ['data/subj' num2str(p.subj) '/' p.expt_name '_subj' num2str(p.subj) '_run' num2str(p.run) '_sess' num2str(p.session) '_date' datestr(now,30)];
 if p.do_et == 1
-    p.eyedatafile = sprintf('%s_D%02.f',p.subj(1:min(length(p.subj),3)),p.run);
+    %p.eyedatafile = sprintf('%s_D%02.f',p.subj(1:min(length(p.subj),3)),p.run);
+    p.eyedatafile = p.filename;
 end
 
 p.rng_seed = cputime*1000;
@@ -71,7 +73,7 @@ p.fix_size_constant = 1.4; %used to be 2
 % ------ color of relevant stim features ----------- %
 % TODO: adjust??
 p.bg_color  = 60;%20*[1 1 1];
-p.fix_color = 90;%%75*[1 1 1];%[150 150 150];        % during trial/delay/etc
+p.fix_color = 200;%%75*[1 1 1];%[150 150 150];        % during trial/delay/etc
 
 p.wm_color = p.fix_color;
 
@@ -122,8 +124,8 @@ p.deltas_all = [30, 7]; %distance from target to test in easy, hard conditions (
 % p.wm_ang = qtmp*90+atmp; clear qtmp atmp;
 possible_ang = 1:359;
 possible_ang(mod(possible_ang,90)==0) = []; %no meridians
-p.wm_ang_all = possible_ang(randperm(length(possible_ang),p.ntrials*p.total_runs)); %shuffle order
-p.wm_ang_all = reshape(p.wm_ang_all,p.ntrials,p.total_runs);
+p.wm_ang_all = possible_ang(randperm(length(possible_ang),p.ntrials*p.total_runs*2)); %shuffle order
+p.wm_ang_all = reshape(p.wm_ang_all,p.ntrials,p.total_runs*2); %create enough for 2 sessions per subject
 
 %%
 %p.TR = 3;
