@@ -24,12 +24,8 @@ function eowm_v01(subj,run,scanner,session)
 %try
 p.expt_name = 'eowm_v01';
 
-<<<<<<< HEAD
-p.do_et = 1;
-=======
 p.do_et = 0;
 p.session = session;
->>>>>>> f15cf879f282f7effe448f4a74d71273552c848b
 
 p.TR = 3; % 4x multiband, so measured TR is 0.75, but "TR" for stim is 3
 
@@ -44,13 +40,7 @@ end
 
 p.filename = ['data/subj' num2str(p.subj) '/' p.expt_name '_subj' num2str(p.subj) '_run' num2str(p.run) '_sess' num2str(p.session) '_date' datestr(now,30)];
 if p.do_et == 1
-<<<<<<< HEAD
-   % p.eyedatafile = sprintf('%s_D%02.f',p.subj(1:min(length(p.subj),3)),p.run);
-   p.eyedatafile = ['cc' num2str(p.run)];
-=======
-    %p.eyedatafile = sprintf('%s_D%02.f',p.subj(1:min(length(p.subj),3)),p.run);
     p.eyedatafile = p.filename;
->>>>>>> f15cf879f282f7effe448f4a74d71273552c848b
 end
 
 p.rng_seed = cputime*1000;
@@ -733,12 +723,7 @@ Screen('Flip',w);
 if p.do_et == 1
     Eyelink('StopRecording');
     Eyelink('ReceiveFile',[p.eyedatafile '.edf'],[p.eyedatafile '.edf']);
-    
-<<<<<<< HEAD
-    p.eyedatafile_renamed = strrep(p.filename,['/subj' num2str(p.subj)],['/subj' num2str(p.subj) '/eyetracking']);
-=======
     p.eyedatafile_renamed = [strrep(p.eyedatafile,['/subj' num2str(subj) '/'],['/subj' num2str(subj) '/eyetracking/']) '.edf'];
->>>>>>> f15cf879f282f7effe448f4a74d71273552c848b
     movefile([p.eyedatafile '.edf'],p.eyedatafile_renamed);
     
     Eyelink('ShutDown');
