@@ -19,12 +19,17 @@
 % 6. Post-feedback
 % 7. ITI
 
-function eowm_v01(subj,run,scanner)
+function eowm_v01(subj,run,scanner,session)
 
 %try
 p.expt_name = 'eowm_v01';
 
+<<<<<<< HEAD
 p.do_et = 1;
+=======
+p.do_et = 0;
+p.session = session;
+>>>>>>> f15cf879f282f7effe448f4a74d71273552c848b
 
 p.TR = 3; % 4x multiband, so measured TR is 0.75, but "TR" for stim is 3
 
@@ -37,10 +42,15 @@ if ~exist(['./data/subj' num2str(subj)],'dir')
     mkdir(['./data/subj' num2str(subj) '/eyetracking']);
 end
 
-p.filename = ['data/subj' num2str(p.subj) '/' p.expt_name '_subj' num2str(p.subj) '_run' num2str(p.run) '_date' datestr(now,30)];
+p.filename = ['data/subj' num2str(p.subj) '/' p.expt_name '_subj' num2str(p.subj) '_run' num2str(p.run) '_sess' num2str(p.session) '_date' datestr(now,30)];
 if p.do_et == 1
+<<<<<<< HEAD
    % p.eyedatafile = sprintf('%s_D%02.f',p.subj(1:min(length(p.subj),3)),p.run);
    p.eyedatafile = ['cc' num2str(p.run)];
+=======
+    %p.eyedatafile = sprintf('%s_D%02.f',p.subj(1:min(length(p.subj),3)),p.run);
+    p.eyedatafile = p.filename;
+>>>>>>> f15cf879f282f7effe448f4a74d71273552c848b
 end
 
 p.rng_seed = cputime*1000;
@@ -72,7 +82,7 @@ p.fix_size_constant = 1.4; %used to be 2
 % ------ color of relevant stim features ----------- %
 % TODO: adjust??
 p.bg_color  = 60;%20*[1 1 1];
-p.fix_color = 90;%%75*[1 1 1];%[150 150 150];        % during trial/delay/etc
+p.fix_color = 200;%%75*[1 1 1];%[150 150 150];        % during trial/delay/etc
 
 p.wm_color = p.fix_color;
 
@@ -114,7 +124,7 @@ p.correct_points = 1; p.incorrect_points = 0;
 % shuffle these
 p.rnd_idx = randperm(p.ntrials);
 p.conditions = p.conditions(p.rnd_idx,:);
-p.deltas_all = [30, 15]; %distance from target to test in easy, hard conditions
+p.deltas_all = [30, 7]; %distance from target to test in easy, hard conditions (first trial)
 
 % generate list of WM positions (all around the circle, 360, but no vertical or horizontal meridians)
 % qtmp = floor(4*rand(p.ntrials,1)); % first, pick a quadrant (any quadrant)
@@ -123,8 +133,8 @@ p.deltas_all = [30, 15]; %distance from target to test in easy, hard conditions
 % p.wm_ang = qtmp*90+atmp; clear qtmp atmp;
 possible_ang = 1:359;
 possible_ang(mod(possible_ang,90)==0) = []; %no meridians
-p.wm_ang_all = possible_ang(randperm(length(possible_ang),p.ntrials*p.total_runs)); %shuffle order
-p.wm_ang_all = reshape(p.wm_ang_all,p.ntrials,p.total_runs);
+p.wm_ang_all = possible_ang(randperm(length(possible_ang),p.ntrials*p.total_runs*2)); %shuffle order
+p.wm_ang_all = reshape(p.wm_ang_all,p.ntrials,p.total_runs*2); %create enough for 2 sessions per subject
 
 %%
 %p.TR = 3;
@@ -299,7 +309,8 @@ else %practice run already ran
     p.deltas_all = old_p.deltas_all; p.cue_colors = old_p.cue_colors; %keep counterbalancing of hard/easy colors/deltas
     p.wm_ang_all = old_p.wm_ang_all; %retain shuffle of WM target positions
 end
-p.wm_ang = p.wm_ang_all(:,p.run+1); %grab run-specific target locations
+%p.wm_ang = p.wm_ang_all(:,p.run+1+10*(p.session==2)); %grab run-specific target locations, adjusting for session #
+p.wm_ang = p.wm_ang_all(:,p.run+1);
 p.wm_coords = p.wm_ecc .* [cosd(p.wm_ang) sind(p.wm_ang)];
 
 % draw up a message about which color is which difficulty level
@@ -723,7 +734,11 @@ if p.do_et == 1
     Eyelink('StopRecording');
     Eyelink('ReceiveFile',[p.eyedatafile '.edf'],[p.eyedatafile '.edf']);
     
+<<<<<<< HEAD
     p.eyedatafile_renamed = strrep(p.filename,['/subj' num2str(p.subj)],['/subj' num2str(p.subj) '/eyetracking']);
+=======
+    p.eyedatafile_renamed = [strrep(p.eyedatafile,['/subj' num2str(subj) '/'],['/subj' num2str(subj) '/eyetracking/']) '.edf'];
+>>>>>>> f15cf879f282f7effe448f4a74d71273552c848b
     movefile([p.eyedatafile '.edf'],p.eyedatafile_renamed);
     
     Eyelink('ShutDown');

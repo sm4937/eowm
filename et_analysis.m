@@ -72,7 +72,8 @@ function [t] = et_analysis(t,conditions,correct)
     t.easy_delay_tc_pupil_size = nanmean(delay_size_timecourse((conditions(:,1)==1)&(correct==1),:),1);  
     t.hard_pres_tc_pupil_size = nanmean(pres_size_timecourse((conditions(:,1)==2)&(correct==1),:),1);
     t.easy_pres_tc_pupil_size = nanmean(pres_size_timecourse((conditions(:,1)==1)&(correct==1),:),1);  %time course of pupil size for target dot presentation, correct trials only
-    
+    t.hard_pres_tc_pupil_size_incorrect = nanmean(pres_size_timecourse((conditions(:,1)==2)&(correct==0),:),1);
+    t.easy_pres_tc_pupil_size_incorrect = nanmean(pres_size_timecourse((conditions(:,1)==1)&(correct==0),:),1);
 end
 
 

@@ -36,7 +36,7 @@ correct_vec = correct(:); rt_vec = rts(:);
 cum_accuracy = cumsum(correct_vec)./(1:length(correct_vec))';
 t.subj = subjnum;
 t.overall_accuracy = cum_accuracy(end);
-t.mean_rt = mean(rts(:));
+t.mean_rt = nanmean(rts(:));
 t.cond_accuracy = [mean(correct_vec(conditions(:,1)==1)) mean(correct_vec(conditions(:,1)==2))];
 t.cond_rt = [mean(rt_vec(conditions(:,1)==1)) mean(rt_vec(conditions(:,1)==2))];
 cum_cond_accuracy(:,1:2) = [cumsum(correct_vec(conditions(:,1)==1))./(1:sum(conditions(:,1)==1))' ...
@@ -48,7 +48,7 @@ quad_identity(wm_ang_all(:)<270&wm_ang_all(:)>180) = 3;
 quad_identity(wm_ang_all(:)<360&wm_ang_all(:)>270) = 4;
 for q = 1:4
     t.accuracy_by_quad(:,q) = mean(correct(quad_identity==q));
-    t.rt_by_quad(:,q) = mean(rts(quad_identity==q));
+    t.rt_by_quad(:,q) = nanmean(rts(quad_identity==q));
 end
 
 % grab pupil information 
