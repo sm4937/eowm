@@ -24,7 +24,7 @@ function eowm_v01(subj,run,scanner,session)
 %try
 p.expt_name = 'eowm_v01';
 
-p.do_et = 0;
+p.do_et = 1;
 p.session = session;
 
 p.TR = 3; % 4x multiband, so measured TR is 0.75, but "TR" for stim is 3
@@ -40,7 +40,7 @@ end
 
 p.filename = ['data/subj' num2str(p.subj) '/' p.expt_name '_subj' num2str(p.subj) '_run' num2str(p.run) '_sess' num2str(p.session) '_date' datestr(now,30)];
 if p.do_et == 1
-    p.eyedatafile = p.filename;
+    p.eyedatafile = ['s' num2str(subj) 'r' num2str(run)];
 end
 
 p.rng_seed = cputime*1000;
@@ -236,7 +236,7 @@ end
 Screen('BlendFunction', w, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 Screen('Preference','TextRenderer',1);
 
-ListenChar(2); %turn matlab keyboard input off
+%ListenChar(2); %turn matlab keyboard input off
 p.ifi = Screen('GetFlipInterval',w);
 
 % ------------------ generate rects we use later ---------------------- %
@@ -723,7 +723,7 @@ Screen('Flip',w);
 if p.do_et == 1
     Eyelink('StopRecording');
     Eyelink('ReceiveFile',[p.eyedatafile '.edf'],[p.eyedatafile '.edf']);
-    p.eyedatafile_renamed = [strrep(p.eyedatafile,['/subj' num2str(subj) '/'],['/subj' num2str(subj) '/eyetracking/']) '.edf'];
+    p.eyedatafile_renamed = [['/subj' num2str(subj) '/eyetracking/'] num2str(run) '.edf'];
     movefile([p.eyedatafile '.edf'],p.eyedatafile_renamed);
     
     Eyelink('ShutDown');
