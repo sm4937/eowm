@@ -66,7 +66,6 @@ if ~isempty(edf_files) %some subjects have no eyetracking data
         % default parameters should work fine - but see docs for other
         % arguments you can/should give when possible
         [ii_trial{ff},ii_cfg] = ii_scoreMGS(ii_data,ii_cfg,ii_sacc);
-        %[ii_trial{ff},ii_cfg] = ii_blinkcorrect(ii_data,ii_cfg,'Pupil','Pupil',1.5,10,10,'prctile');
 
     end
 

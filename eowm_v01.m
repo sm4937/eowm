@@ -723,7 +723,7 @@ Screen('Flip',w);
 if p.do_et == 1
     Eyelink('StopRecording');
     Eyelink('ReceiveFile',[p.eyedatafile '.edf'],[p.eyedatafile '.edf']);
-    p.eyedatafile_renamed = [['/subj' num2str(subj) '/eyetracking/'] num2str(run) '.edf'];
+    p.eyedatafile_renamed = [strrep(p.filename,['data/subj' num2str(subj) '/'],['data/subj' num2str(subj) '/eyetracking/']) '.edf'];
     movefile([p.eyedatafile '.edf'],p.eyedatafile_renamed);
     
     Eyelink('ShutDown');
