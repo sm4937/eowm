@@ -5,11 +5,11 @@ clear all
 % first-pass at analyzing effort of WM task data
 files = dir('data/'); files = char(files.name);
 data_folders = files(contains(string(files),'subj'),:);
-for f = 1:size(data_folders,1) %from existing subj folders, load subject numbers up
-    temp = strsplit(string(data_folders(f,:)),'subj');
-    subjs(f) = str2num(char(temp(2))); 
-end
-subjs(subjs==99) = []; %ignore debug subject
+% for f = 1:size(data_folders,1) %from existing subj folders, load subject numbers up
+%     temp = strsplit(string(data_folders(f,:)),'subj');
+%     subjs(f) = str2num(char(temp(2))); 
+% end
+% subjs(subjs==99) = []; %ignore debug subject
 subjs = 2:4; %replace here because pilot 1 is a mess anyway
 
 data = [];

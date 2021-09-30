@@ -670,6 +670,9 @@ for tt = 1:p.ntrials
         
     end
     trial_time = toc %make sure trial time still standardized
+    
+    % catalog trial ending time
+    p.trial_end(tt) = GetSecs;
     % figure out staircase for next trial
     % DO STAIRCASING!
     p.correct(tt,run+1) = p.resp(tt)==p.conditions(tt,2); %did they press 1 or 2?
