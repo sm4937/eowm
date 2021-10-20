@@ -90,10 +90,6 @@ p.cue_colors = p.cue_colors(randperm(2,2),:);
 
 p.feedback_colors = round([0 0.44*255 0;255 0 0;.305*255 .305*255 0]); % green, red, yellow for corr, incorr, miss
 
-% define geometry, dot properties, etc of distractors
-
-p.dist_jitter = 12; % ABSOLUTE randomize distractor position by + or - this (polar ang deg)
-
 % ------ conditions ------ %
 
 p.p_hard = 0.5; % probability of hard trial
@@ -669,7 +665,7 @@ for tt = 1:p.ntrials
         end
         
     end
-    trial_time = toc %make sure trial time still standardized
+    % trial_time = toc; %make sure trial time still standardized
     
     % catalog trial ending time
     p.trial_end(tt) = GetSecs;
@@ -726,8 +722,9 @@ Screen('Flip',w);
 if p.do_et == 1
     Eyelink('StopRecording');
     Eyelink('ReceiveFile',[p.eyedatafile '.edf'],[p.eyedatafile '.edf']);
-    p.eyedatafile_renamed = [strrep(p.filename,['data/subj' num2str(subj) '/'],['data/subj' num2str(subj) '/eyetracking/']) '.edf'];
-    movefile([p.eyedatafile '.edf'],p.eyedatafile_renamed);
+    p.eyedatafile_renamed = [p.filename '.edf'];
+    copyfile([p.eyedatafile '.edf'],p.eyedatafile_renamed);
+    movefile(p.eyedatafile_renamed,['data/subj' num2str(subj) '/eyetracking/'])
     
     Eyelink('ShutDown');
 end

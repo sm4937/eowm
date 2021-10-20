@@ -123,56 +123,125 @@ for sess = 1:2
         % make a column vector which starts at 0 and ends at the end of trial
         all_times = reshape([all_times-run_start]',numel(all_times),1);
         all_times = [0; behav.p.start_wait+all_times; all_times(end)+behav.p.end_wait];
+
+        
         % mark all events that occur
         % 1 is trial start, 2 is target start, 3 is delay start
-        % 4 is test start, 5 is feedback start, 6 is iti start
+        % 4 is test start, 5 is feedback start, 6 is iti start, 7 is 
+        % time betwen ITI end and next trial start
         all_events = [0; repmat([1; 2; 3; 4; 5; 6; 7],12,1); 0];
         all_conds = [0; reshape(repmat(behav.p.conditions(:,1),1,7)',84,1); 0];
+        all_ang = [NaN; reshape(repmat(behav.p.wm_ang,1,7)',84,1); NaN];
         all_trials = repmat([1:12],7,1); all_trials = [0; all_trials(:); 0];
-        % 0 padding and extra seconds added on come from 
+        % 0 padding and extra seconds added on come from wait time at start
+        % and end of each run
         
         for tt = 1:length(times)
             slice = times(tt);
             idx = find(all_times<slice);
             if ~isempty(idx)
-                long_run = [long_run; subject sess r all_trials(idx(end)) slice all_events(idx(end)) all_conds(idx(end))];
+                long_run = [long_run; subject sess r all_trials(idx(end)) slice all_events(idx(end)) all_conds(idx(end)) all_ang(idx(end))];
             end
         end
-        events = sum(long_run(:,6)==[2 4 5],2);
-        long_run = [long_run events];
+        
+        % get relative time in delay period to compare late delay to early
+        % delay later on, etc.
+        delay_times = zeros(size(long_run,1),1);
+        for trial = 1:max(unique(long_run(:,4)))
+            start = behav.p.start_wait + behav.p.delay_start(trial) - run_start;
+            delay_times(long_run(:,6)==3&long_run(:,4)==trial,:) = long_run(long_run(:,6)==3&long_run(:,4)==trial,5) - start
+        end
+        long_run = [long_run delay_times];
         long = [long; long_run];
+        
     end
 end
 % label in table for clarity
-full = table; full.subj = long(:,1);
+full = table; 
+full.subj = long(:,1);
 full.sess = long(:,2);
-full.run = long(:,3); full.trial = long(:,4);
+full.run = long(:,3); 
+full.trial = long(:,4);
 full.time = long(:,5);
-full.epoch = long(:,6); full.cond = long(:,7);
-full.event = long(:,8);
-full.overalltrial = cumsum([1; diff(full.trial)~=0]);
+full.epoch = long(:,6); 
+full.cond = long(:,7);
+full.stimval = long(:,8);
+full.delay_times = long(:,9);
+full.overalltrial = cumsum([0; diff(full.trial)~=0]);
+full.overallrun = cumsum([1; diff(full.run)~=0]);
 
-%variables for analysis
-hard = full.cond==2;
-delay = full.epoch==3;
+% delay_times = zeros(height(full),1);
+% full.delay_times = delay_times;
 
-%need to load ROIs in for real analyses
+idxes = ([false; diff(full.overalltrial)~=0]);
+eval(['task_subj' num2str(subject) ' = full(idxes,:);'])
+save(['task_subj' num2str(subject) '.mat'], ['task_subj' num2str(subject)])
+
+%% Create GLM 
+% Predictors are each epoch, each condition
+
+tau = 2; %tau/10 is rate of decay
+delta = 5; %experiment-derived time lag parameter
+
+% Set the HRF according to these parameters
+t = [0:1:30];
+tshift = max(t-delta,0);
+HIRF = (tshift/tau).^2 .* exp(-tshift/tau) / (2*tau);
+
+predictors(:,1) = ones(height(full),1); %baseline image intensity (intercept term)
+predictors(:,2) = repmat([1:(nTRs-1)]',runs*sess,1); %linear drift component
+% in full.event:
+% 1 is trial start, 2 is target start, 3 is delay start
+% 4 is test start, 5 is feedback start, 6 is iti start, 7 is 
+% time betwen ITI end and next trial start
+predictors(:,3) = full.epoch==2 & full.cond==1; %target stimulus on screen
+predictors(:,4) = full.epoch==3 & full.cond==1; %delay period
+predictors(:,5) = full.epoch==6 & full.cond==1; %ITI
+% redo all the above predictors for hard trials
+predictors(:,6) = full.epoch==2 & full.cond==2; %target stimulus on screen
+predictors(:,7) = full.epoch==3 & full.cond==2; %delay period
+predictors(:,8) = full.epoch==6 & full.cond==2; %ITI
+
+dummies = predictors;
+dummies(:,3:8) = dummies(:,3:8) .* [3:8];
+
+model = pinv(predictors);
+
+voxeltc = funcdata{r}(x,y,z,:); 
+%grab timecourse (tc) of each voxel
+betas = model * squeeze(voxeltc);
+
 
 %% Analyze functional data in terms of percent signal change,
 % across all PRF-defined ROIs 
 
 subject = 'CC';
+subjnum = 4;
 
 ROI_folder = dir(ROIpath);
 ROI_list = char(ROI_folder.name); %list all possible ROIs
 ROI_list(1:2,:) = []; % get rid of blank indices in folder
 %ROI_list = string(ROI_list);
 
-PRFparams = niftiread('/System/Volumes/Data/d/DATA/data/vRF_tcs/CC/RF1/CC_RF1_vista/RF_surf_25mm-fFit.nii.gz');
+%PRFparams = niftiread('/System/Volumes/Data/d/DATA/data/vRF_tcs/CC/RF1/CC_RF1_vista/RF_surf_25mm-fFit.nii.gz');
+%save(['PRFparams_subj' num2str(subjnum) '.mat'],'PRFparams')
+load(['PRFparams_subj' num2str(subjnum) '.mat'])
+% Params is 8D, and each dimension is:
+% pol : polar angle
+% ve : variance explained
+% ecc : eccentricity
+% sigmamajor : sigma of the gaussian describing the RF
+% exponent : the exponent of the gaussian RF
+% x0 : center of the PRF in x coords
+% y0 : center of the PRF in y coords
+% b : not sure
 
 hemi = 'bilat';
 % pick the hemisphere you want to examine
 hemi_list = ROI_list(contains(string(ROI_list),hemi),:);
+
+%Pre-define some variables that you want averages over
+delay_mean_PSC = struct();
 
 for area = 1:size(hemi_list,1)
     ROI_filename = strrep(hemi_list(area,:),' ','');
@@ -181,6 +250,13 @@ for area = 1:size(hemi_list,1)
     ROI_name = regexp(ROI_filename, pat, 'tokens');
     trial_index = [];
     all_trial_signal = [];
+    
+    % get variance explained from PRF fitting
+    VE = PRFparams(:,:,:,2); VE = VE(ROI.data>0);
+    nvoxels = sum(VE>0.1);
+    
+    %initialize saving structure here
+    eval(['delay_mean_PSC.' + string(ROI_name) + ' = NaN(max(full.overalltrial),nvoxels);'])
 
     for sess = 1:2
         load([savepath '/fmri/sess' num2str(sess) '.mat']);
@@ -192,15 +268,17 @@ for area = 1:size(hemi_list,1)
             all_voxel_tcs = niftiExtract(funcdata{r},ROI);
             % Tommy wrote this function to extract ROI-based functional
             % maps
-            all_voxel_tcs = all_voxel_tcs';
-            % Z-score of this?
             
+            all_voxel_tcs = all_voxel_tcs';
+            spec_voxel_tcs = all_voxel_tcs(VE>0.1,:);
+            
+            % Z-score of this?
+                         
             % reshape the voxels into a 2D matrix,
             % where time is the 2nd dimension and voxel # is the first 
             nTRs = size(funcdata{r}.data,4);
-            nvoxels = sum(ROI.data(:));
 
-            fmriSignal = all_voxel_tcs;
+            fmriSignal = spec_voxel_tcs;
             fmriResponse = 100 * ((fmriSignal./(nanmean(fmriSignal,2))) - 1);
             %fmriResponse = fmriSignal;
             
@@ -210,14 +288,7 @@ for area = 1:size(hemi_list,1)
                 trial_signal = NaN(nvoxels,55);
                 trial_signal(:,1:sum(data.trial==t)) = fmriResponse(:,data.trial==t);
                 % Grab TR's inside each trial, in order
-                %noniti = data.epoch(data.trial==t)<6;
-                %trial_signal(:,~noniti) = NaN; %trim the ITIs off
-                
-                % % TO DO :
-                % Stop trimming ITIs off, just cut off the ends of the
-                % longer ITI trials to compare across ITI lengths
-                % % 
-                
+
                 all_trial_signal = [all_trial_signal; trial_signal];
                 % Grab percent signal change in that voxel over each of those
                 % trials
@@ -228,6 +299,13 @@ for area = 1:size(hemi_list,1)
                 % we're averaging across voxels, over all trials. In the
                 % future you may want to use this index to compare percent
                 % signal change across trial types.)
+                
+                delay = (data.epoch(data.trial==t)==3)';
+                late_delay = data.delay_times(data.trial==t) >= 6;
+                eval(['delay_mean_PSC.' + string(ROI_name) + "(overalltrial,:) = nanmean(trial_signal(:,late_delay),2)';"])
+                % save mean PSC in delay period on this trial, for that ROI
+                % resulting struct has trial (rows) x voxel (columns)
+                % measurements of mean delay period PSC
             end % of cycling over trials
 
         end % of cycling over runs
@@ -253,7 +331,8 @@ for area = 1:size(hemi_list,1)
     
     pause(5); saveas(fig,['PSC/' + string(ROI_name{1}) + '.jpg']);
     close 5
-
+    
+    save(['PSC/late_delay_mean_PSC_subj' num2str(subjnum) '_VEselected.mat'],'delay_mean_PSC')
 end % of cycling over areas of interest (ROIs)
 
 %% %% Convolving with an HRF
