@@ -1,64 +1,33 @@
 %% Going through fMRI tools tutorial that Yuna sent from the NYU fMRI Lab course
 % Adapting to my purposes as a first pass on fMRI data analysis
 clear all
-tic 
-%specify subject ID as string
-subject = 'CC';
-sess = 2;
-condcolors = [153 0 76; 0 76 153]./255;
 
-datapath = ['/System/Volumes/Data/d/DATB/datb/eowm_SM/old_preprocessing_fmri/' subject '/'];
-addpath(genpath(datapath))
 addpath(genpath('/Users/sarah/Documents/MATLAB/fmriTools'))
 addpath(genpath('/System/Volumes/Data/d/DATA/home/sarah/preproc_mFiles'))
 addpath(genpath('/System/Volumes/Data/d/DATA/home/sarah/vistasoft_ts'))
 % pull up some pre-built functions
-toc 
 
-% make sure data accessible
-savepath = ['/Users/sarah/Documents/MATLAB/eowm/data/subj' subject];
-newdatadir = ['/Users/sarah/Documents/MATLAB/eowm/data/subj' subject '/fmri/'];
-mkdir(newdatadir);
-subjfiles = ls([savepath '/fmri']);
-ROIpath = [datapath 'ROIs'];
+condcolors = [153 0 76; 0 76 153]./255;
 
 %% Load data up from nifti files
 
+%specify subject ID as string
+load('subjinits.mat')
+
+subjnum = 4;
+subject = subjinits{subjnum};
+sess = 2;
+
+% make sure data accessible
+savepath = ['/Users/sarah/Documents/MATLAB/eowm/data/subj' num2str(subjnum)];
+newdatadir = ['/Users/sarah/Documents/MATLAB/eowm/data/subj' num2str(subjnum) '/fmri/'];
+datapath = ['/System/Volumes/Data/d/DATB/datb/eowm_SM/old_preprocessing_fmri/' subject '/'];
+mkdir(newdatadir);
+subjfiles = ls(newdatadir);
+ROIpath = [datapath 'ROIs'];
+
 if ~contains(subjfiles,['sess' num2str(sess)]) %fmri data has not already been loaded
-
-    %anatpath = [datapath 'sub-' subject '/ses-anat/anat/sub-' subject '_ses-anat_desc-preproc_T1w.nii'];
-    %funcpath = [datapath 'sub-' subject '/ses-func/func/'];
-    anatpath = [datapath subject 'anat/'];
-    funcpath = [datapath 'sess' num2str(sess) '/'];
-
-
-    funcfiles = dir(funcpath); runs = [];
-    % From subject-specific folder, grab functional run numbers for later use
-    for f = 1:length(funcfiles)
-        name = funcfiles(f).name;
-        if contains(name,'func_volreg_normPctDet')
-            file = strsplit(name,'func_volreg_normPctDet');
-            runs = [runs; str2double(file{2}(1:2))];
-        end
-    end
-
-    runs = unique(runs(~isnan(runs)));
-    for r = 1:length(runs)
-        %functional_tag = ['sub-' subject '_ses-func_task-TASK_run-' num2str(r) '_space-T1w_desc-preproc_bold.nii'];
-        if r < 10
-            %functional_tag = ['surf_volreg_normPctDet0' num2str(r) '.nii.gz'];
-            functional_tag = ['surf_volreg_detrend0' num2str(r) '.nii.gz'];  
-        else
-            functional_tag = ['surf_volreg_detrend' num2str(r) '.nii.gz'];
-        end
-        % This is an arbitrary functional file, probably not the one you
-        % want to use, really
-        filename = [funcpath functional_tag];
-        [funcdata{r}] = niftiRead(filename);
-    end
-
-    %[anat] = niftiread(anatpath);
-    save([savepath '/fmri/sess' num2str(sess) '.mat'],'funcdata','-v7.3');
+    pull_fmri_data(subjnum,sess)
 else
     load([savepath '/fmri/sess' num2str(sess) '.mat']);
 end
@@ -93,89 +62,10 @@ end
 
 %% So, one thing you could do is match task data to TRs
 % One TR = 750 msec
-% One trial = ~16 seconds
+% One trial = ~20 seconds
 % Match the timings up to get task-based insights
-subject = 4;
-datapath = ['/Users/sarah/Documents/MATLAB/eowm/data/subj' num2str(subject)];
-allbehavfiles = strsplit(ls(datapath),'.mat'); %get behavioral data to match up
 
-TR = 0.75; % in seconds
-
-long = [];
-for sess = 1:2
-    
-    load([savepath '/fmri/sess' num2str(sess) '.mat']);
-    % load up functional data for that session
-    runs = length(funcdata);
-    nTRs = size(funcdata{1}.data,4); %how many total TRs?
-    
-    for r = 1:runs
-        run = r-1; long_run = [];
-        behavidx = find(contains(allbehavfiles,['run' num2str(run) '_sess' num2str(sess)]));
-        % find and load the behav file for this run
-        beginidx = find(allbehavfiles{behavidx}=='o'); beginidx = beginidx(1)-1;
-        behav = load([datapath '/' allbehavfiles{behavidx}(beginidx:end) '.mat']);
-        times = 0:TR:(TR*nTRs); times = times(1:nTRs)';
-        run_start = behav.p.trial_start(1);
-        run_end = behav.p.iti_start(end)-run_start;
-
-        all_times = [behav.p.trial_start behav.p.targ_start behav.p.delay_start behav.p.test_start behav.p.feedback_start behav.p.iti_start behav.p.iti_start+behav.p.itis];
-        % make a column vector which starts at 0 and ends at the end of trial
-        all_times = reshape([all_times-run_start]',numel(all_times),1);
-        all_times = [0; behav.p.start_wait+all_times; all_times(end)+behav.p.end_wait];
-
-        
-        % mark all events that occur
-        % 1 is trial start, 2 is target start, 3 is delay start
-        % 4 is test start, 5 is feedback start, 6 is iti start, 7 is 
-        % time betwen ITI end and next trial start
-        all_events = [0; repmat([1; 2; 3; 4; 5; 6; 7],12,1); 0];
-        all_conds = [0; reshape(repmat(behav.p.conditions(:,1),1,7)',84,1); 0];
-        all_ang = [NaN; reshape(repmat(behav.p.wm_ang,1,7)',84,1); NaN];
-        all_trials = repmat([1:12],7,1); all_trials = [0; all_trials(:); 0];
-        % 0 padding and extra seconds added on come from wait time at start
-        % and end of each run
-        
-        for tt = 1:length(times)
-            slice = times(tt);
-            idx = find(all_times<slice);
-            if ~isempty(idx)
-                long_run = [long_run; subject sess r all_trials(idx(end)) slice all_events(idx(end)) all_conds(idx(end)) all_ang(idx(end))];
-            end
-        end
-        
-        % get relative time in delay period to compare late delay to early
-        % delay later on, etc.
-        delay_times = zeros(size(long_run,1),1);
-        for trial = 1:max(unique(long_run(:,4)))
-            start = behav.p.start_wait + behav.p.delay_start(trial) - run_start;
-            delay_times(long_run(:,6)==3&long_run(:,4)==trial,:) = long_run(long_run(:,6)==3&long_run(:,4)==trial,5) - start
-        end
-        long_run = [long_run delay_times];
-        long = [long; long_run];
-        
-    end
-end
-% label in table for clarity
-full = table; 
-full.subj = long(:,1);
-full.sess = long(:,2);
-full.run = long(:,3); 
-full.trial = long(:,4);
-full.time = long(:,5);
-full.epoch = long(:,6); 
-full.cond = long(:,7);
-full.stimval = long(:,8);
-full.delay_times = long(:,9);
-full.overalltrial = cumsum([0; diff(full.trial)~=0]);
-full.overallrun = cumsum([1; diff(full.run)~=0]);
-
-% delay_times = zeros(height(full),1);
-% full.delay_times = delay_times;
-
-idxes = ([false; diff(full.overalltrial)~=0]);
-eval(['task_subj' num2str(subject) ' = full(idxes,:);'])
-save(['task_subj' num2str(subject) '.mat'], ['task_subj' num2str(subject)])
+full = get_full_table(subjnum,sess);
 
 %% Create GLM 
 % Predictors are each epoch, each condition
@@ -215,8 +105,9 @@ betas = model * squeeze(voxeltc);
 %% Analyze functional data in terms of percent signal change,
 % across all PRF-defined ROIs 
 
-subject = 'CC';
-subjnum = 4;
+% Get task data
+load(['task_subj' num2str(subjnum) '.mat'])
+eval(['task = task_subj' num2str(subjnum) ';'])
 
 ROI_folder = dir(ROIpath);
 ROI_list = char(ROI_folder.name); %list all possible ROIs
@@ -233,12 +124,16 @@ load(['PRFparams_subj' num2str(subjnum) '.mat'])
 % sigmamajor : sigma of the gaussian describing the RF
 % exponent : the exponent of the gaussian RF
 % x0 : center of the PRF in x coords
-% y0 : center of the PRF in y coords
-% b : not sure
+% y0 : center of the PRF in y coords, flipped from what you would think
+% i.e. negative number are above the horizontal meridian
+% b : amplitude
 
 hemi = 'bilat';
 % pick the hemisphere you want to examine
 hemi_list = ROI_list(contains(string(ROI_list),hemi),:);
+% trim ROIs which not all subjects have, for comparison's sake
+hemi_list(contains(string(hemi_list),{'V2d','V2v','V3d','V3v','VO1','VO2',...
+    'LO1','LO2','TO1','TO2','FOVEAIPS'}),:) = [];
 
 %Pre-define some variables that you want averages over
 delay_mean_PSC = struct();
@@ -255,10 +150,19 @@ for area = 1:size(hemi_list,1)
     VE = PRFparams(:,:,:,2); VE = VE(ROI.data>0);
     nvoxels = sum(VE>0.1);
     
+    [RFs,anti_RFs] = draw_RFs(PRFparams,ROI);
+    spec_RFs = RFs(VE>0.1,:);
+    
+    RF_thresh = 0.001;
+    % each stimulus is a gaussian around a polar angle (approx)
+    % how aligned each stimulus with each RF of each voxel will be telling
+    inRF = (normpdf(0:359,task.stimval,1) * spec_RFs')>RF_thresh;
+    outRF = (normpdf(0:359,task.stimval,1) * anti_RFs(VE>0.1,:)')>RF_thresh;
+
     %initialize saving structure here
     eval(['delay_mean_PSC.' + string(ROI_name) + ' = NaN(max(full.overalltrial),nvoxels);'])
 
-    for sess = 1:2
+    for sess = 1:sessions
         load([savepath '/fmri/sess' num2str(sess) '.mat']);
         % load up functional data for that session
         runs = length(funcdata);
@@ -279,15 +183,24 @@ for area = 1:size(hemi_list,1)
             nTRs = size(funcdata{r}.data,4);
 
             fmriSignal = spec_voxel_tcs;
-            fmriResponse = 100 * ((fmriSignal./(nanmean(fmriSignal,2))) - 1);
-            %fmriResponse = fmriSignal;
+            
+            % OPTION 1: Divide by the mean of each time course, so the mean over 
+            % the 399 TRs
+            % PSC = 100 * ((fmriSignal./(nanmean(fmriSignal,2))) - 1);
+            % OPTION 2: Divide by the mean of the first few TR's, so all
+            % time courses start at 0
             
             data = full(full.run==r&full.sess==sess,:);
+            
             % Cycle over trials 
             for t = 1:max(unique(data.trial))
                 trial_signal = NaN(nvoxels,55);
-                trial_signal(:,1:sum(data.trial==t)) = fmriResponse(:,data.trial==t);
+                
+                %trial_signal(:,1:sum(data.trial==t)) = PSC(:,data.trial==t);
                 % Grab TR's inside each trial, in order
+                start = fmriSignal(:,data.trial==t); start = start(:,1:4);
+                PSC_trial = 100 * ((fmriSignal(:,data.trial==t)./nanmean(start,2)) - 1);
+                trial_signal(:,1:sum(data.trial==t)) = PSC_trial;
 
                 all_trial_signal = [all_trial_signal; trial_signal];
                 % Grab percent signal change in that voxel over each of those
@@ -312,27 +225,58 @@ for area = 1:size(hemi_list,1)
     
     end % of cycling over sessions
     
-    figure(5)
+    % Get task data
     hard_trials = unique(full.overalltrial(full.cond==2,:));
     hard_idx = sum(trial_index == hard_trials',2)==1;
+
+    figure('Position',[0 0 1200 500])
+    subplot(1,2,1)
+    % Plot time course of PSC for this ROI, differentiating between
+    % conditions
     errorbar(nanmean(all_trial_signal(hard_idx,:)),nanstd(all_trial_signal(hard_idx,:))./sqrt(nvoxels*sess),'Color',condcolors(1,:),'LineWidth',1.25,'DisplayName','Hard trials')
-    xticks(1:22)
-    xticklabels(0:TR:TR*22)
+    xticks(0:4:44)
+    xticklabels(0:TR*2:TR*22)
     hold on
     errorbar(nanmean(all_trial_signal(~hard_idx,:)),nanstd(all_trial_signal(~hard_idx,:))./sqrt(nvoxels*sess),'Color',condcolors(2,:),'LineWidth',1.25,'DisplayName','Easy trials')
     plot([2.5 2.5],ylim,'k--','LineWidth',1.25,'DisplayName','Stim onset')
-    plot([20 20],ylim,'k--','LineWidth',1.25,'DisplayName','Test onset')
-    plot([21.5 21.5],ylim,'k--','LineWidth',1.25,'DisplayName','Feedback onset')
+    plot([32 32],ylim,'k--','LineWidth',1.25,'DisplayName','Test onset')
+    plot([34 34],ylim,'k--','LineWidth',1.25,'DisplayName','Feedback onset')
     fig = gcf; fig.Color = 'w'; ax = gca; ax.FontSize = 12;
     title(['Mean Signal Change over Trials: ' ROI_name{1}])
     ylabel('Mean percent signal change')
     xlabel('Time (seconds)')
     legend('boxoff')
     
+    subplot(1,2,2)
+    eval(['means = delay_mean_PSC.' + string(ROI_name) + ';'])
+    % take mean of means, over 2 x 2 in RF vs trial type
+    inRF_easy = means(repmat(task.cond==1,1,size(inRF,2))&inRF);
+    inRF_hard = means(repmat(task.cond==2,1,size(inRF,2))&inRF);
+    outRF_easy = means(repmat(task.cond==1,1,size(outRF,2))&outRF);
+    outRF_hard = means(repmat(task.cond==2,1,size(outRF,2))&outRF);
+    
+    trialtypemeans = [nanmean(means(task.cond==1,:),2) nanmean(means(task.cond==2,:),2)];
+    
+    errorbar(nanmean(trialtypemeans),[nanstd(trialtypemeans(:,1)) nanstd(trialtypemeans(:,2))]./sqrt(size(means,1)./2), ...
+        'ok','LineWidth',2,'DisplayName','Mean over trial types')
+    hold on
+    errorbar([nanmean(inRF_easy) nanmean(inRF_hard)],[nanstd(inRF_easy) nanstd(inRF_hard)]./sqrt(size(means,1)./2), ...
+        'ob','LineWidth',2,'DisplayName','Mean PSC inside RF')
+    errorbar([nanmean(outRF_easy) nanmean(outRF_hard)],[nanstd(outRF_easy) nanstd(outRF_hard)]./sqrt(size(means,1)./2), ...
+        'or','LineWidth',2,'DisplayName','Mean PSC outside RF')
+    
+    title(['Mean late delay period activity: ' ROI_name{1}])
+    xticks([1 2])
+    xticklabels({'Easy trials','Hard trials'})
+    ylabel('Mean % signal change')
+    ax = gca; ax.FontSize = 12; xlim([0.5 2.5]);
+    legend('location','best')
+    
     pause(5); saveas(fig,['PSC/' + string(ROI_name{1}) + '.jpg']);
-    close 5
+    close all
     
     save(['PSC/late_delay_mean_PSC_subj' num2str(subjnum) '_VEselected.mat'],'delay_mean_PSC')
+    
 end % of cycling over areas of interest (ROIs)
 
 %% %% Convolving with an HRF

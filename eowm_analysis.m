@@ -10,14 +10,14 @@ data_folders = files(contains(string(files),'subj'),:);
 %     subjs(f) = str2num(char(temp(2))); 
 % end
 % subjs(subjs==99) = []; %ignore debug subject
-subjs = 2:4; %replace here because pilot 1 is a mess anyway
+subjs = 4:6; %replace here because pilot 1 is a mess anyway
 
 data = [];
 for s = 1:length(subjs)
     subj = subjs(s);
     data = [data; makeEOWMdatatable(subj)];
 end
-n = length(data.subj); condlabels = {'Easy','Hard'};
+n = length(data.subj); condlabels = {'Easy','Hard'}; condcolors = [190 0 110; 0 110 190]./255;
 
 %% Make plots
 figure
