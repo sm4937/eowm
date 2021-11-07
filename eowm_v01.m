@@ -183,7 +183,7 @@ else
 end
 p.start_key = [KbName('5%') KbName('5')];  % should be lower-case t at prisma? (or %5, which is top-row 5, or 5, which is numpad 5)
 p.space = KbName('space');
-p.resp_keys = [KbName('1!') KbName('2@')]; % LEFT, RIGHT
+p.resp_keys = [KbName('3#') KbName('4$')]; % LEFT, RIGHT
 
 % ------- Screen setup, optics --------- %
 
@@ -287,7 +287,7 @@ if run == 0 %if practice run, display instructions first
     p.all_conditions = zeros(0);
 else %practice run already ran
     % load up old information about correctness, deltas, conditions
-    filename = [p.expt_name '_subj' num2str(p.subj) '_run' num2str(p.run-1)];
+    filename = [p.expt_name '_subj' num2str(p.subj) '_run' num2str(p.run-1) '_sess' num2str(p.session)];
     folder = ls(['data/subj' num2str(p.subj)]);
     specific_filename = folder(contains(string(folder),filename),:);
     old_p = load(['data/subj' num2str(subj) '/' specific_filename]); old_p = old_p.p;
