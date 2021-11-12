@@ -8,23 +8,23 @@ folder_name = ['data/subj' num2str(subjnum)];
 files = dir(folder_name); files = char(files.name);
 files = files(4:end,:); %get rid of . and .. at folder head
 files(contains(string(files),'eyetracking'),:) = []; %remove eyetracking files from this stage
+files(contains(string(files),'fmri'),:) = []; %also the fmri folder
+
 for f = 1:size(files,1) %rows
     allp{f} = load([folder_name '/' files(f,:)]); %pull p's out of each file
 end
 
 %grab relevant information out of allps and put into t
-rts = []; conditions = []; %initialize blank variables
+rts = []; conditions = []; wm_ang_all = []; correct = [];
+%initialize blank variables
+
 for run = 1:length(allp)
     p = allp{run}.p; %load up everything from p
-    correct = p.correct; maxruns = p.total_runs;
-    if subjnum == 1
-        conditions = [conditions; p.all_conditions];
-    else
-        conditions = p.all_conditions;
-    end
+    correct = [correct; p.correct(:,p.run+1)]; 
+    conditions = [conditions; p.conditions];
     deltas = p.deltas_all(1:end-1,:); % the final deltas_all is unused
     target_accuracy = p.target_accuracy;
-    wm_ang_all = p.wm_ang_all(:,1:run);
+    wm_ang_all = [wm_ang_all; p.wm_ang];
     if find(contains(fieldnames(p),'MGS_start'))>0
         p.test_start = p.MGS_start;
     end
@@ -50,6 +50,7 @@ for q = 1:4
     t.accuracy_by_quad(:,q) = mean(correct(quad_identity==q));
     t.rt_by_quad(:,q) = nanmean(rts(quad_identity==q));
 end
+t.deltas = deltas(end,:);
 
 % grab pupil information 
 t = et_analysis(t,conditions,correct_vec);

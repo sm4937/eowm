@@ -249,7 +249,7 @@ for area = 1:size(hemi_list,1)
     xticks([1 2])
     xticklabels({'Easy trials','Hard trials'})
     ylabel('Mean % signal change')
-    fig = gcf; fig.Color = 'w'; ax = gca; ax.FontSize = 12; xlim([0.5 2.5]);
+    fig = gcf; fig.Color = 'w'; ax = gca; ax.FontSize = 14; xlim([0.5 2.5]);
     legend('location','best')
     
     figlabel = ['Subject ' num2str(subjnum)];
@@ -281,19 +281,20 @@ for rii = 1:size(hemi_list,1)
         load(['PRFparams_subj' num2str(subjnum) '.mat'])
         VE = PRFparams(:,:,:,2);
         
-        centers_x = PRFparams(:,:,:,6); 
-        centers_y = PRFparams(:,:,:,7);
-        % Centers in x and y coordinates
-        ROI_centers = [centers_x(ROI.data>0 & VE >= selection_cutoff) ...
-            centers_y(ROI.data>0 & VE >= selection_cutoff)];
+%         centers_x = PRFparams(:,:,:,6); 
+%         centers_y = PRFparams(:,:,:,7);
+%         % Centers in x and y coordinates
+%         ROI_centers = [centers_x(ROI.data>0 & VE >= selection_cutoff) ...
+%             centers_y(ROI.data>0 & VE >= selection_cutoff)];
         
-        % centers = rad2deg(PRFparams(:,1));
-        % centers in degrees
-        % ROI_centers = round(centers(ROI.data>0&VE>=selection_cutoff,:));
+        centers = rad2deg(PRFparams(:,:,:,1));
+        %centers in degrees
+        ROI_centers = round(centers(ROI.data>0&VE>=selection_cutoff,:));
         
         load(['task_subj' num2str(subjnum) '.mat'])
         eval(['task = task_subj' num2str(subjnum) ';'])
-        stimval = [task.x_target task.y_target]; 
+        %stimval = [task.x_target task.y_target]; 
+        stimval = task.stimval;
         stimval = stimval(sum(~isnan(stimval),2)>0,:);
         cond = task.cond(task.cond>0,:);
         
@@ -303,7 +304,7 @@ for rii = 1:size(hemi_list,1)
         PSC_sorted_means = []; PSC_binned_means = [];
         for tii = 1:length(stimval)
             
-            distances = sum((stimval(tii,:)-ROI_centers).^2,2);
+            distances = get_angular_distance(stimval(tii,:),ROI_centers);
             tosort = [means(tii,:)' distances]; 
             
             nbins = 10;
@@ -355,7 +356,7 @@ end % of looping over ROIs
 %% Run TAFKAP on data, get estimation accuracy out
 
 % Example subject
-subjnum = 5;
+subjnum = 6;
 % % Grab task data
 load(['task_subj' num2str(subjnum) '.mat'])
 eval(['task = task_subj' num2str(subjnum) ';'])
@@ -382,6 +383,7 @@ ROI_list = fieldnames(TAFKAP_output);
 
 figure
 % Cycle through each ROI and plot estimation accuracy
+stimval = task.stimval(~isnan(task.stimval));
 for rii = 1:length(ROI_list)
     
     ROI_name = ROI_list{rii};
@@ -389,7 +391,7 @@ for rii = 1:length(ROI_list)
     eval(['estimates = (TAFKAP_output.' ROI_name '.est).*2;'])
     
     subplot(3,4,rii)
-    scatter(task.stimval(~isnan(task.stimval)),estimates,'Filled')
+    scatter(stimval(1:length(estimates)),estimates,'Filled')
     fig = gcf; fig.Color = 'w'; ax = gca; ax.FontSize = 12;
     xlabel('Real stimuli'); ylabel('Decoded stimuli')
     title(['Decoding accuracy of ' ROI_name])

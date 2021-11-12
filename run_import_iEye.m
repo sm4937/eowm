@@ -37,7 +37,11 @@ root = tmp(1:(tmp2(end)-1));
 files = dir(['data/subj' num2str(subj) '/eyetracking/']); 
 filenames = string(char(files.name));
 edf_files = filenames(contains(filenames,'.edf')&contains(filenames,'eowm')); 
+
 edf_files = strrep(edf_files,' ',''); folder_name = string(char(files.folder));
+temp = [edf_files(contains(edf_files,'sess1'),:); edf_files(contains(edf_files,'sess2'),:)];
+edf_files = temp;
+
 if ~isempty(edf_files) %some subjects have no eyetracking data
     edf_files = fullfile(folder_name(1:length(edf_files),:),edf_files);
 

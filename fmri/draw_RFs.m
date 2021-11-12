@@ -63,8 +63,8 @@ else strcmp(type,'bump')
     % Do a smooth Gaussian bump, weighting contribution of RF by proximity,
     % width of RF
     
-    RFs = normpdf(
-end
+    RFs = normpdf(1:360,round(voxel_RF_centers),voxel_RF_sigmas);
+    anti_RFs = normpdf(1:360,outRF_means,voxel_RF_sigmas);
     
 end
     

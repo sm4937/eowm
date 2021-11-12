@@ -14,7 +14,6 @@ p.stim_type = 'circular';
 ROI_list = fieldnames(data);
 ROI_list(contains(ROI_list,{'V2d','V2v','V3d','V3v','VO1','VO2','LO1','LO2','TO1','TO2'})) = [];
 
-TAFKAP_output = struct;
 for rii = 1:length(ROI_list)
     ROI_name = ROI_list(rii);
     eval(['BOLD = data.' ROI_name{1} ';'])
