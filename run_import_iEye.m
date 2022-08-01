@@ -1,4 +1,4 @@
-function [ii_sess] = run_import_iEye(subj)
+function [ii_sess] = run_import_iEye(subj,subjs_with_wrong_freq)
 %% run_import_iEye
 % use iEye package to load edf, preprocess data, output usable data
 % structure
@@ -13,7 +13,12 @@ addpath(genpath('/System/Volumes/Data/d/DATA/hyper/software/eyelinkPoisonIvy/EYE
 setpref('iEye_ts','edf2asc_path','/Applications/EyeLink/') %EyeLink edf2asc pref for path
 setpref('examples','edf2asc_path','/Applications/Eyelink')
 %setpref('examples','edf2asc_path','/System/Volumes/Data/d/DATA/hyper/software/eyelinkPoisonIvy/EYELINK/elcl/EDF/') %EyeLink edf2asc pref for path
-ifg_fn = 'p_500hz.ifg'; %here in the directory with me
+if sum(subjs_with_wrong_freq == subj)>0 %sometimes I forgot to set this correctly in the scanner room
+    ifg_fn = 'p_1000hz.ifg';
+    % account for that here
+else
+    ifg_fn = 'p_500hz.ifg'; %intended frequency of eye-tracking data
+end
 
 
 ii_params = ii_loadparams; % load default set of analysis parameters, only change what we have to

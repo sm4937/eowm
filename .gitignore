@@ -1,0 +1,23 @@
+#git ignore for eowm github
+
+#file types to ignore on top of the directory
+*.jpg
+*.eps
+*.fig
+*.mat
+*.ai
+*.pdf
+
+#file types to ignore in subfolders
+**/.DS_Store
+**/*.jpg
+**/*.eps
+**/*.fig
+**/*.mat
+**/*.ai
+**/*.pdf
+
+#folders not to go into
+fmri/*
+data/*
+fmri/PSC/*

@@ -53,7 +53,8 @@ end
 t.deltas = deltas(end,:);
 
 % grab pupil information 
-t = et_analysis(t,conditions,correct_vec);
+subjs_with_wrong_freq = [10, 11];
+t = et_analysis(t,conditions,correct_vec,subjs_with_wrong_freq);
 
 %check out the staircase
 figure
