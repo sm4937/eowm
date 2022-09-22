@@ -8,6 +8,8 @@ clear all
 addpath(genpath('/Users/sarah/Documents/MATLAB/fmriTools'))
 addpath(genpath('/System/Volumes/Data/d/DATA/home/sarah/preproc_mFiles'))
 addpath(genpath('/System/Volumes/Data/d/DATA/home/sarah/vistasoft_ts'))
+addpath('../')
+addpath(genpath('Users/sarah/Documents/MATLAB/RMAOV33/'))
 % pull up some pre-built functions
 
 condcolors = [190 0 110; 0 110 190]./255;
@@ -17,11 +19,13 @@ nTRs = 399;
 
 %specify subject ID as string
 load('subjinits.mat')
-subjlist = [4 5 6 7 8 9 10 11 12 13 15]; 
-nsessions = [2 2 2 2 2 2 2 2 2 2 2];
+subjlist = [4 5 6 7 8 9 10 11 12 13 14 16]; 
+% there is a subj 15, but her data are all bad (eyetracking messed up, PRF
+% maps discontinuous, etc. etc.)
+nsessions = [2 2 2 2 2 2 2 2 2 2 2 2];
 n = length(subjlist);
 
-subjnum = 15;
+subjnum = 16;
 sessions = 2;
 %specify n sessions for your subject
 subject = subjinits{subjnum};
@@ -30,14 +34,17 @@ subject = subjinits{subjnum};
 savepath = ['/Users/sarah/Documents/MATLAB/eowm/data/subj' num2str(subjnum)];
 newdatadir = ['/Users/sarah/Documents/MATLAB/eowm/data/subj' num2str(subjnum) '/fmri/'];
 datapath = ['/System/Volumes/Data/d/DATB/datb/eowm_SM/old_preprocessing_fmri/' subject '/'];
+%datapath = ['/System/Volumes/Data/d/DATC/datc/eowm_SM/old_preprocessing_fmri/' subject '/'];
 mkdir(newdatadir);
+% copies of many key data files are stored here now:
+% ('/System/Volumes/Data/d/DATA/home/sarah/key_eowm_files')
+% make sure they don't blow up if my local computer does for some reason
 subjfiles = ls(newdatadir);
-ROIpath = [datapath 'ROIs'];
 
 % if data not already pulled, pull it
 for sess = 1:sessions
     if ~contains(subjfiles,['sess' num2str(sess)]) %fmri data has not already been loaded
-        pull_fmri_data(subjnum,sess)
+        pull_fmri_data(subjnum,sess,datapath)
     end
 end
 
@@ -64,11 +71,15 @@ save('current_full.mat','full','-v7.3')
 %     load('current_full.mat')
 % end
 
-subjlist = [12 13];
+% V1-V2-V3 BUG REMAINS!!! In 4 line plot (figure 4)
+% the problematic subject is subject #12
+% it's an EASY OUT RF voxel that is the problem, or maybe a few of them
 
 % pull an example subject directory, for grabbing a list of ROIs to look at
 % across subjects (CC is a good one)
-ROIpath = '/System/Volumes/Data/d/DATB/datb/eowm_SM/old_preprocessing_fmri/';
+subject = 'CC';
+%ROIpath = ['/System/Volumes/Data/d/DATB/datb/eowm_SM/old_preprocessing_fmri/' subject '/ROIs'];
+ROIpath = ['/System/Volumes/Data/d/DATC/datc/eowm_SM/old_preprocessing_fmri/'];
 ROI_folder = dir([ROIpath 'CC/ROIs/']);
 ROI_list = char(ROI_folder.name); %list all possible ROIs
 ROI_list(1:2,:) = []; % get rid of blank indices in folder
@@ -104,7 +115,7 @@ SEMs_easy = NaN(length(subjlist),55);
 tc_hard = NaN(length(subjlist),55);
 tc_easy = NaN(length(subjlist),55);
 
-for area = 1 %1:size(hemi_list,1)
+for area = 1:size(hemi_list,1)
     clear ROI ROI_name
     if contains(spec,'fovea') % foveal ROI
         ROI_name{1} = fovea_ROIs{area};
@@ -146,6 +157,11 @@ for area = 1 %1:size(hemi_list,1)
         has_all_ROIs = true;
         for jj = 1:length(ROI_filename)
             has_all_ROIs = has_all_ROIs & contains(ls(ROI_path_subj),ROI_filename(jj,:));
+        end
+        if subjnum==12 && area==1 %patch this bug this way
+            % clay thinks I've grabbed a blood vessel by accident in my ROI
+            % in this person (it's 2-3 voxels I think)
+            has_all_ROIs = false;
         end
         
         if has_all_ROIs
@@ -226,7 +242,12 @@ for area = 1 %1:size(hemi_list,1)
                         start = fmriSignal(:,data.trial==t); start = start(:,1:4);
                         PSC_trial = 100 * ((fmriSignal(:,data.trial==t)./nanmean(start,2)) - 1);
                         trial_signal(:,1:sum(data.trial==t)) = PSC_trial;
-
+                        
+                        %tracking some variables - why the huge outliers in
+                        %subject 12 V1 timecourse?
+                        nanmean(PSC_trial(:));
+                        beep = sort(start(:),'descend'); beep(end-150:end-50);
+                        
                         all_trial_signal = [all_trial_signal; trial_signal];
                         
                         hard = unique(data.cond(data.trial==t,:))==2;
@@ -263,7 +284,6 @@ for area = 1 %1:size(hemi_list,1)
 
             eval(['delay_mean_PSC = delay_mean_PSC_subj' num2str(subjnum) ';'])
             save(['PSC/late_delay_mean_PSC_subj' num2str(subjnum) '_VEselected' spec '.mat'],'delay_mean_PSC')
-
             eval(['means = delay_mean_PSC_subj' num2str(subjnum) '.' char(ROI_name{1}) ';'])
             % take mean of means, over 2 x 2 in RF vs trial type
 
@@ -285,30 +305,49 @@ for area = 1 %1:size(hemi_list,1)
             tc_easy(sii,:) = nanmean(all_trial_signal(~hard_idx,:),1);
             
             % Now grab time course of hard/easy trials in/out receptive
-            % field voxelx
+            % field voxels
             tc_hard_inRF(sii,:) = nanmean(tc_hard_inRF_subj);
             tc_easy_inRF(sii,:) = nanmean(tc_easy_inRF_subj);
             tc_hard_outRF(sii,:) = nanmean(tc_hard_outRF_subj);
             tc_easy_outRF(sii,:) = nanmean(tc_easy_outRF_subj);
+            
+            eval(['delay_trialtype_PSC.' char(ROI_name{1}) ' = trialtypemeans(sii,:);'])
+            eval(['delay_trialtype_PSC.' char(ROI_name{1}) '_SEM = trialtypeSEMs(sii,:);'])
+            save(['PSC/late_delay_mean_PSC_trialtypes_subj' num2str(subjnum) '_VEselected_foveaROIs.mat'],'delay_trialtype_PSC')
 
         end % end of cutting subjects out who don't have this ROI
         
-    end % of cycling over participants
+    end % of cycling over participants (sii loop)
 
     %figure('Position',[0 0 1200 500])
+    % Plot time course of PSC for this ROI, differentiating between
+    % HARD and EASY trials
     figure(1)
     subplot(3,2,area)
     % Plot time course of PSC for this ROI, differentiating between
     % conditions
-    avg_tc_hard = nanmean(tc_hard(:,1:20)); avg_tc_easy = nanmean(tc_easy(:,1:20));
-    SEM_hard = nanstd(tc_hard(:,1:20))/sqrt(n);
-    SEM_easy = nanstd(tc_easy(:,1:20))/sqrt(n);
+    % collapsed across in/out RF
+%     avg_tc_hard = nanmean(tc_hard(:,1:20)); avg_tc_easy = nanmean(tc_easy(:,1:20));
+%     SEM_hard = nanstd(tc_hard(:,1:20))/sqrt(n);
+%     SEM_easy = nanstd(tc_easy(:,1:20))/sqrt(n);
+    % in RF only
+    avg_tc_hard = nanmean(tc_hard_inRF(:,1:20)); avg_tc_easy = nanmean(tc_easy_inRF(:,1:20));
+    SEM_hard = nanstd(tc_hard_inRF(:,1:20))/sqrt(n);
+    SEM_easy = nanstd(tc_easy_inRF(:,1:20))/sqrt(n);
+    
+    hold on
+    btwn_fill = [avg_tc_hard + SEM_hard, fliplr(avg_tc_hard - SEM_hard)];
+    fill_xs = [1:20, fliplr(1:20)];
+    fill(fill_xs,btwn_fill,condcolors(1,:),'linestyle','none','facealpha',0.2,'DisplayName','Hard trials');
+    btwn_fill = [avg_tc_easy + SEM_easy, fliplr(avg_tc_easy-SEM_easy)];
+    fill(fill_xs,btwn_fill,condcolors(2,:),'linestyle','none','facealpha',0.2,'DisplayName','Easy trials');
+    plot(1:20,avg_tc_easy,'Color',condcolors(2,:),'LineWidth',2)
+    plot(1:20,avg_tc_hard,'Color',condcolors(1,:),'LineWidth',2)
 
-    errorbar(avg_tc_hard,SEM_hard,'Color',condcolors(1,:),'LineWidth',1.25,'DisplayName','Hard trials')
+    %errorbar(avg_tc_hard,SEM_hard,'Color',condcolors(1,:),'LineWidth',1.25,'DisplayName','Hard trials')
+    %errorbar(avg_tc_easy,SEM_easy,'Color',condcolors(2,:),'LineWidth',1.25,'DisplayName','Easy trials')
     xticks(0:2:37)
     xticklabels(0:TR*2:TR*37)
-    hold on
-    errorbar(avg_tc_easy,SEM_easy,'Color',condcolors(2,:),'LineWidth',1.25,'DisplayName','Easy trials')
     %delay period starts 1.5 seconds in
     plot([3 3],ylim,'k--','LineWidth',1.25,'DisplayName','Delay onset')
     %delay period ends at 13.5
@@ -319,7 +358,11 @@ for area = 1 %1:size(hemi_list,1)
     ylabel('Mean % signal change')
     xlabel('Time (seconds)')
     legend('boxoff')
-    pause(5); saveas(fig,['PSC/Mean PSC.jpg']);
+    if size(hemi_list,1) == area
+        % last ROI has been plotted
+        saveas(fig,['PSC/Mean PSC in RF only.jpg']);
+    end
+    pause(1)
     
     figure(2)
     subplot(3,2,area)
@@ -338,13 +381,51 @@ for area = 1 %1:size(hemi_list,1)
     ylabel('Mean % signal change')
     fig = gcf; fig.Color = 'w'; ax = gca; ax.FontSize = 14; xlim([0.5 2.5]);
     legend('location','best')
-    
     figlabel = ['Subject ' num2str(subjnum)];
     if length(subjlist) > 1; figlabel = ['N = ' num2str(length(subjlist))]; end
-    pause(5); saveas(fig,'PSC/Condition differences PSC.jpg');
-    %saveas(fig,['PSC/' figlabel ':' char(ROI_name{1}) '.jpg']);
+    if size(hemi_list,1) == area
+        saveas(fig,'PSC/Condition differences PSC.jpg');
+    end
+    pause(1)
     
+
     figure(3)
+    subplot(3,2,area)
+    % Plot time course of PSC for this ROI, differentiating between
+    % IN and OUT RF voxels
+    neutral_color = [50 50 50]./255;
+    avg_tc_in = nanmean(tc_hard_inRF(:,1:20)); avg_tc_out = nanmean(tc_hard_outRF(:,1:20));
+    SEM_in = nanstd(tc_hard_inRF(:,1:20))/sqrt(n);
+    SEM_out = nanstd(tc_hard_outRF(:,1:20))/sqrt(n);
+    
+    hold on
+    btwn_fill = [avg_tc_in + SEM_in, fliplr(avg_tc_in - SEM_in)];
+    fill_xs = [1:20, fliplr(1:20)];
+    fill(fill_xs,btwn_fill,neutral_color,'linestyle','none','facealpha',0.2,'DisplayName','In RF');
+    btwn_fill = [avg_tc_out + SEM_out, fliplr(avg_tc_out-SEM_out)];
+    fill(fill_xs,btwn_fill,neutral_color,'linestyle','none','facealpha',0.2,'DisplayName','Out of RF');
+    plot(1:20,avg_tc_in,'Color',neutral_color,'LineWidth',2)
+    plot(1:20,avg_tc_out,'--','Color',neutral_color,'LineWidth',2)
+    xticks(0:2:37)
+    xticklabels(0:TR*2:TR*37)
+    %delay period starts 1.5 seconds in
+    plot([3 3],ylim,'k--','LineWidth',1.25,'DisplayName','Delay onset')
+    %delay period ends at 13.5
+    plot([18 18],ylim,'k--','LineWidth',1.25,'DisplayName','Delay end')
+    % by 15 seconds in, there's just he ITI, so that should get trimmed out
+    fig = gcf; fig.Color = 'w'; ax = gca; ax.FontSize = 14;
+    title(['Mean Signal Change over Trials: ' ROI_name{1}])
+    ylabel('Mean % signal change')
+    xlabel('Time (seconds)')
+    legend('boxoff')
+    if size(hemi_list,1) == area
+        % last ROI has been plotted
+        saveas(fig,['PSC/Mean PSC in vs out RF (hard only).jpg']);
+    end
+    pause(1)
+    
+    % superimpose ALL conditions here
+    figure(4)
     subplot(3,2,area)
     % Plot time course of PSC for this ROI, differentiating between
     % conditions
@@ -390,112 +471,57 @@ for area = 1 %1:size(hemi_list,1)
     ylabel('Mean % signal change')
     xlabel('Time (seconds)')
     legend('boxoff')
-    pause(5); saveas(fig,['PSC/Mean PSC in and out RF timecourse.jpg']);
+    if size(hemi_list,1) == area
+        saveas(fig,['PSC/Mean PSC in and out RF timecourse.jpg']);
+    end
+    pause(1)
+    
         
 end % of cycling over areas of interest (ROIs)
 
 
-%% Make PSC graphs based on RF center distance from stim
-clear all
-load('PSC/late_delay_mean_PSC_subj4_VEselected.mat')
-hemi_list = fieldnames(delay_mean_PSC);
-selection_cutoff = 0.1;
-condcolors = [190 0 110; 0 110 190]./255;
+%% Run statistics on fMRI timecourses - condition differences
 
-load('subjinits.mat')
-subjlist = [4 5 6 7];
-%subjlist = 6;
+% take mean delay period activity in:
+% one number one subject one ROI (12 x 6 per cell)
+% - in RF hard 
+% - in RF easy
+% - out RF hard
+% - out RF easy
+% - times 6 for each ROI
 
-for rii = 1:size(hemi_list,1)
-    ROI_name = hemi_list{rii};
-    ROI_filename = ['bilat.' ROI_name '.nii.gz'];
-    
-    for sii = 1:length(subjlist)
-        subjnum = subjlist(sii);
-        ROI = niftiRead(['/System/Volumes/Data/d/DATB/datb/eowm_SM/old_preprocessing_fmri/' subjinits{subjnum} '/ROIs/' ROI_filename]);
-        
-        load(['PRFparams_subj' num2str(subjnum) '.mat'])
-        VE = PRFparams(:,:,:,2);
-        
-%         centers_x = PRFparams(:,:,:,6); 
-%         centers_y = PRFparams(:,:,:,7);
-%         % Centers in x and y coordinates
-%         ROI_centers = [centers_x(ROI.data>0 & VE >= selection_cutoff) ...
-%             centers_y(ROI.data>0 & VE >= selection_cutoff)];
-        
-        centers = rad2deg(PRFparams(:,:,:,1));
-        %centers in degrees
-        ROI_centers = round(centers(ROI.data>0&VE>=selection_cutoff,:));
-        
-        load(['task_subj' num2str(subjnum) '.mat'])
-        eval(['task = task_subj' num2str(subjnum) ';'])
-        %stimval = [task.x_target task.y_target]; 
-        stimval = task.stimval;
-        stimval = stimval(sum(~isnan(stimval),2)>0,:);
-        cond = task.cond(task.cond>0,:);
-        
-        load(['PSC/late_delay_mean_PSC_subj' num2str(subjnum) '_VEselected.mat'])
-        eval(['means = delay_mean_PSC.' ROI_name ';'])
-        
-        PSC_sorted_means = []; PSC_binned_means = [];
-        for tii = 1:length(stimval)
-            
-            distances = get_angular_distance(stimval(tii,:),ROI_centers);
-            tosort = [means(tii,:)' distances]; 
-            
-            nbins = 10;
-            [y,edges] = histcounts(distances,nbins);
-            for bin = 1:nbins
-                start_bin = edges(bin);
-                end_bin = edges(bin+1);
-                PSC_binned_means{bin}(tii,:) = nanmean(tosort((tosort(:,2)<end_bin & tosort(:,2)>=start_bin),1));
-            end
-            
-            % could just sort by absolute distance, or could bin in
-            % relation to each other
-            sorted_means = sortrows(tosort,2);
-            PSC_sorted_means(tii,:) = sorted_means(:,1)';
-            % one row per trial, one column per voxel
-            
-        end % of looping over trials
-                
-%          hard_means(sii,:) = nanmean(PSC_sorted_means(cond==2,:),1);
-%          easy_means(sii,:) = nanmean(PSC_sorted_means(cond==1,:),1);
-%          hard_SEMs(sii,:) = nanstd(PSC_sorted_means(cond==2,:),[],1)./sqrt(sum(cond==2));
-%          easy_SEMs(sii,:) = nanstd(PSC_sorted_means(cond==1,:),[],1)./sqrt(sum(cond==1));
-         
-        for bin = 1:nbins
-            hard_line(sii,bin) = nanmean(PSC_binned_means{bin}(cond==2,:));
-            hard_SEM(sii,bin) = nanstd(PSC_binned_means{bin}(cond==2,:))./sqrt(length(PSC_binned_means{bin}(cond==2,:)));
-            easy_line(sii,bin) = nanmean(PSC_binned_means{bin}(cond==1,:));
-            easy_SEM(sii,bin) = nanstd(PSC_binned_means{bin}(cond==1,:))./sqrt(length(PSC_binned_means{bin}(cond==1,:)));
-        end
-
-         
-    end % of looping over subjects
-
-    figure(3)
-    subplot(5,2,rii)
-    errorbar(nanmean(hard_line,1),nanmean(hard_SEM,1),'LineWidth',1.5,'Color',condcolors(1,:),'DisplayName','Hard trials')
+    errorbar(nanmean(trialtypemeans(:,1:2),1),[nanmean(trialtypeSEMs(:,1:2),1)], ...
+        'ok','LineWidth',2,'DisplayName','Mean over trial types')
+    % plotting trial type means & errorbars using averages, average SEMs
     hold on
-    errorbar(nanmean(easy_line,1),nanmean(easy_SEM,1),'LineWidth',1.5,'Color',condcolors(2,:),'DisplayName','Easy trials')
-    xlabel('Distance of RF center from target stimulus (AU)')
-    ylabel('Mean % signal change: Late delay period')
-    title([ROI_name])
-    legend('Location','Best')
-    fig = gcf; fig.Color = 'w';
-    ax = gca; ax.FontSize = 12;
+    errorbar(nanmean(trialtypemeans(:,3:4),1),[nanmean(trialtypeSEMs(:,3:4),1)], ...
+        'ob','LineWidth',2,'DisplayName','Mean PSC inside RF')
+    errorbar(nanmean(trialtypemeans(:,5:6),1),[nanmean(trialtypeSEMs(:,5:6),1)], ...
+        'or','LineWidth',2,'DisplayName','Mean PSC outside RF')
 
-    
-end % of looping over ROIs
+% run 3-way ANOVA [within ROI]
+% rma0v3
+% obtain true F value across all subjects
+
+% now, shuffle WITHIN ROI
+% hard & easy trial labels (shuffle of one column in ANOVA table)
+% obtain new F value
+% rinse, repeat N_permutations times
+
+% obtain final percentage (p-value) of null F values >= true F value
+% sum F_boot > F_true
+% divide by N_permutations
 
 %% Run TAFKAP on data, get estimation accuracy out
 
 % Example subject
-subjnum = 15;
+subjnum = 16;
 % % Grab task data
 load(['task_subj' num2str(subjnum) '.mat'])
 eval(['task = task_subj' num2str(subjnum) ';'])
+condcolors = [190 0 110; 0 110 190]./255;
+neutral_color = [50 50 50]./255;
+
 
 %Specify which file you're interested in
 %spec = '_megaROIs';
@@ -516,25 +542,39 @@ else %TAFKAP has not been run on this subject yet
     
 end % of deciding to run TAFKAP or not
 
-% % % MAKE TAFKAP PLOTS % % %tolman5308
-
+% % % MAKE TAFKAP PLOTS % % %
 ROI_list = fieldnames(TAFKAP_output);
+%ROI_list = {'V1_V2d_V3d','V3AB','IPS0_IPS1','IPS2_IPS3','iPCS','sPCS'};
+ROI_labels = ROI_list;
+for ii = 1:length(ROI_labels)
+    label = strrep(ROI_labels{ii},'_','-');
+    ROI_labels{ii} = label;
+end
+%ROI_labels{1} = 'V1-V2-V3';
 
 % PLOT DECODING ACCURACY FOR EVERY ROI %
-figure
 % Cycle through each ROI and plot estimation accuracy
 stimval = task.stimval(~isnan(task.stimval));
+
+figure; 
+plotnum = [1 2 3 7 8 9];
 for rii = 1:length(ROI_list)
     
     ROI_name = ROI_list{rii};
     
     eval(['estimates = (TAFKAP_output.' ROI_name '.est).*2;'])
     
-    subplot(3,2,rii)
+    subplot(4,3,plotnum(rii))
     scatter(stimval(1:length(estimates)),estimates,'Filled','MarkerFaceAlpha',.5,'MarkerEdgeAlpha',.2)
-    fig = gcf; fig.Color = 'w'; ax = gca; ax.FontSize = 14;
-    ylabel('Decoded stimuli')
-    title(ROI_name)
+    ylabel('Decoded stimuli'); xlabel('Real stimuli')
+    title(ROI_labels{rii})
+    [fig,ax] = clean_fig();
+    
+    subplot(4,3,plotnum(rii)+3)
+    distances = get_angular_distance(estimates,stimval(1:length(estimates)));
+    histogram(distances)
+    xlabel('Absolute decoding error')
+    [fig,ax] = clean_fig();
     
     if rii > 6
         % last ROI in the list
@@ -547,7 +587,7 @@ end
 % Averaged across available subjects
 
 
-subjlist = [4 5 6 7 8 9 10 11 12 13 15];
+subjlist = [4 5 6 7 8 9 10 11 12 13 14 15];
 n = length(subjlist);
 task_trimmed = task(~isnan(task.stimval),:);
 % example_hard_trial = 75;
@@ -555,13 +595,6 @@ task_trimmed = task(~isnan(task.stimval),:);
 example_hard_trial = randsample(find(task_trimmed.cond==2),1);
 example_easy_trial = randsample(find(task_trimmed.cond==1),1);
 xs = -179:180;
-ROI_list = fieldnames(TAFKAP_output);
-ROI_list = {'V1_V2d_V3d','V3AB','IPS0_IPS1','IPS2_IPS3','iPCS','sPCS'};
-ROI_labels = ROI_list;
-for ii = 1:length(ROI_labels)
-    label = strrep(ROI_labels{ii},'_','-');
-    ROI_labels{ii} = label;
-end
 
 error = NaN(240,n);
 unc = NaN(240,n);
@@ -592,12 +625,14 @@ for ROI = 1:length(ROI_list)
         
         eval(['est = TAFKAP_output.' ROI_name '.est;'])
         ROI_fidelity(ROI,sii) = corr(task_trimmed.stimval(1:length(est)),est);
+        param_tradeoff(ROI,sii) = corr(error(:,sii),unc(:,sii));
+        
 
     end
 
     if strcmp(ROI_name,'V3AB')
-        V3AB_error = error;
-        V3AB_unc = unc;
+        V3AB_error = mean_errors;
+        V3AB_unc = mean_uncs;
     end
     
     xtick_list = [xtick_list; count+1.5];
@@ -614,9 +649,9 @@ for ROI = 1:length(ROI_list)
         yvalue = max([nanmean(mean_errors(:,1)) nanmean(mean_errors(:,2))])+7;
         scatter(count+0.5,yvalue,'k*')
     end
-    title(['Decoding error'])
-    ylabel('Error')
-    ax = gca; ax.FontSize = 14;
+    title('Decoding error')
+    ylabel('Error (degrees)')
+    [fig,ax] = clean_fig();
     xticks(xtick_list)
     xticklabels(ROI_labels)
         
@@ -632,21 +667,21 @@ for ROI = 1:length(ROI_list)
         scatter(count+0.5,yvalue,'k*')
     end
     title(['Decoding uncertainty'])
-    ylabel('Uncertainty')
-    ax = gca; ax.FontSize = 14;
+    ylabel('Uncertainty (degrees)')
+    [fig,ax] = clean_fig();
     count = count+3;
     xticks(xtick_list)
     xticklabels(ROI_labels)
     
-end
 
-mean_error = nanmean(V3AB_error,2);
-% V3AB_error(example_hard_trial,2)
-% V3AB_unc(example_hard_trial,2)
-mean_unc = nanmean(V3AB_unc,2);
+end %of cycling over ROIs
+
+subjnum = 6; ind = subjnum==subjlist;
 subplot(3,1,3)
-hard_dist = normpdf(xs,V3AB_error(example_hard_trial,2),V3AB_unc(example_hard_trial,2));
-easy_dist = normpdf(xs,V3AB_error(example_easy_trial,2),V3AB_unc(example_easy_trial,2)); 
+hard_dist = normpdf(xs,V3AB_error(ind,2),V3AB_unc(ind,2));
+easy_dist = normpdf(xs,V3AB_error(ind,1),V3AB_unc(ind,1)); 
+%hard_dist = normpdf(xs,nanmean(V3AB_error(:,2)),nanmean(V3AB_unc(:,2)));
+%easy_dist = normpdf(xs,nanmean(V3AB_error(:,1)), nanmean(V3AB_unc(:,1)));
 plot(xs,hard_dist,'LineWidth',1.5,'Color',condcolors(1,:),'DisplayName','Hard trial')
 hold on
 plot(xs,easy_dist,'LineWidth',1.5,'Color',condcolors(2,:),'DisplayName','Easy trial')
@@ -654,30 +689,154 @@ legend('Location','Best')
 title(['Example stimulus representations in V3AB'])
 xlabel('Representation error (degrees)')
 ylabel('Posterior probability')
-ax = gca; ax.FontSize = 14;
-fig = gcf; fig.Color = 'w';
+yticks([])
+[fig,ax] = clean_fig();
 
 
 % Determine fidelity of representations in each ROI 
-figure
+figure(8); figure(9);
 for ROI = 1:length(ROI_list)
+    
+    figure(8)
     scatter(ROI.*ones(size(ROI_fidelity,2),1),ROI_fidelity(ROI,:),'Filled')
     hold on
-    star_height = 0.8;
+    star_height = 0.7;
     [h,p] = ttest(ROI_fidelity(ROI,:));
+    if p < 0.05
+        plot(ROI,star_height,'k*')
+    end
+    errorbar(ROI,nanmean(ROI_fidelity(ROI,:)),nanstd(ROI_fidelity(ROI,:))/sqrt(n),'k','LineWidth',1.5)
+    plot(xlim,[0 0],'--','Color',neutral_color)
+    [fig,ax] = clean_fig();
+    title('Decoding performance by ROI')
+    ylabel(sprintf('Correlation \n(Decoded location vs real location)'))
+    xlim([0.5 6.5])
+    ylim([-0.2 0.8])
+    xticklabels(ROI_labels)
+    
+    figure(9)
+    scatter(ROI.*ones(size(param_tradeoff,2),1),param_tradeoff(ROI,:),'Filled')
+    hold on
+    star_height = 0.8;
+    [h,p] = ttest(param_tradeoff(ROI,:));
     if p < 0.05
         plot(ROI,star_height,'*')
     end
+    errorbar(ROI,nanmean(param_tradeoff(ROI,:)),nanstd(param_tradeoff(ROI,:))/sqrt(n),'k','LineWidth',1.5)
+    xlim([0.5 6.5])
+    ylim([-0.2 0.8])
+   
         
 end
-fig = gcf; fig.Color = 'w';
-title('Fidelity of TAFKAP representations by ROI')
-ylabel('TAFKAP estimate vs real stim (r)')
+[fig,ax] = clean_fig();
+title('Are error & unc correlated? (TAFKAP check)')
+ylabel('TAFKAP error versus uncertainty (r)')
 xticks(1:length(ROI_list))
 xticklabels(ROI_labels)
 xlim([0.5 length(ROI_list)+0.5])
 ylim([-0.2 star_height+0.1])
-ax = gca; ax.FontSize = 14;
+
+%% Supplementary analyses of TAFKAP read-outs
+
+% are TAFKAP read-outs biased towards or away from any areas in particular
+
+count = 0; xval_ROI = [-0.25 0.25];
+figure(10); fig = gcf; fig.Color = 'w';
+figure(11); fig = gcf; fig.Color = 'w';
+figure(12); fig = gcf; fig.Color = 'w';
+for ROI = 1:length(ROI_list)
+    
+    ROI_name = ROI_list{ROI};
+    meridian_biases_hard = NaN(n,4); meridian_biases_easy = NaN(n,4);
+    cw_biases_easy = NaN(n,1); cw_biases_hard = NaN(n,1);
+    response_biases = NaN(n,1);
+
+    for sii = 1:n
+
+        subjnum = subjlist(sii);
+        load(['TAFKAP_subj' num2str(subjnum) spec '.mat'], 'TAFKAP_output')
+        
+        eval(['has_ROI = sum(~isnan(TAFKAP_output.' ROI_name '.est))>0;'])
+
+        if has_ROI
+
+            load(['task_subj' num2str(subjnum) '.mat'])
+            eval(['task = task_subj' num2str(subjnum) ';'])
+            task_trimmed = task(~isnan(task.stimval),:);
+
+            eval(['[cw_biases_onesubj,meridian_biases_onesubj] = get_angular_biases(TAFKAP_output.' ROI_name '.est.*2,task_trimmed.stimval);'])
+
+            cw_biases_easy(sii) = nanmean(cw_biases_onesubj(task_trimmed.cond==1,:))-1.5;
+            cw_biases_hard(sii) = nanmean(cw_biases_onesubj(task_trimmed.cond==2,:))-1.5;
+            cw_biases(sii,:) = nanmean(cw_biases_onesubj)-1.5;
+            
+            response_biases(sii) = nanmean(task.resp)-1.5;
+            %center on 0
+
+            meridian_biases_easy(sii,:) = nanmean(meridian_biases_onesubj(task_trimmed.cond==1,:));
+            meridian_biases_hard(sii,:) = nanmean(meridian_biases_onesubj(task_trimmed.cond==2,:));
+        
+        end % of ROI if statement
+        
+
+    end % of subject-level loop
+
+    figure(10)
+    hold on
+    xval_ROI = xval_ROI+1;
+    scatter(xval_ROI(1)*ones(n,1),cw_biases_easy,[],condcolors(2,:),'Filled')
+    errorbar(xval_ROI,[nanmean(cw_biases_easy) nanmean(cw_biases_hard)], ...
+        [nanstd(cw_biases_easy) nanstd(cw_biases_hard)]/sqrt(n),'k','LineWidth',1.5)
+    scatter(xval_ROI(2)*ones(n,1),cw_biases_hard,[],condcolors(1,:),'Filled')
+    plot(xlim,[0 0],'k--')
+    ax = gca; ax.FontSize = 14;
+    %count = count+3;
+    xticks([1:length(ROI_labels)])
+    xticklabels(ROI_labels)
+    ylabel('Clockwise bias')
+    hold off
+    
+    figure(11)
+    subplot(3,2,ROI)
+    % 6 ROIs to plot scatters for
+    scatter(response_biases,cw_biases,'Filled')
+    toinclude = ~isnan(response_biases)&~isnan(cw_biases);
+    [r,p] = corr(response_biases(toinclude),cw_biases(toinclude));
+    % individual to each ROI
+    text = ROI_labels{ROI};
+    if p < 0.05
+        text = [ROI_labels{ROI} ', r = ' num2str(r)];
+        lsline
+    end
+    title(text)
+    ylabel('TAFKAP readout bias')
+    xlabel('Subject response bias')
+    ax = gca; ax.FontSize = 14;
+    
+    figure(12)
+    subplot(3,2,ROI)
+    
+    xval = [-0.25 0.25];
+    hold on
+    for ii = 1:4
+        xval = xval+1;
+        scatter(xval(1)*ones(n,1),meridian_biases_easy(:,ii),[],condcolors(2,:),'Filled')
+        errorbar(xval,[nanmean(meridian_biases_easy(:,ii)) nanmean(meridian_biases_hard(:,ii))], ...
+            [nanstd(meridian_biases_easy(:,ii)) nanstd(meridian_biases_hard(:,ii))]/sqrt(n),'k','LineWidth',1.5)
+        scatter(xval(2)*ones(n,1),meridian_biases_hard(:,ii),[],condcolors(1,:),'Filled')
+    end
+    plot(xlim,[0 0],'k--')
+    title(ROI_name)
+    xlabel('Meridian')
+    ylabel('Degrees of bias towards meridian')
+    xticks([1:4])
+    xlim([0.70 4.30])
+    xticklabels({'0 degrees','90 degrees','180 degrees','270 degrees'})
+    xtickangle(45)
+    ax = gca; ax.FontSize = 14;
+
+end
+
 
 
 % for each subject, correlate pupil size and memory precision
@@ -704,7 +863,6 @@ end
 
 disp([num2str(tallyerror) ' significant correlations w/ representational error out of ' num2str(sii) ' subjects, 4 pupil measures.']) 
 disp([num2str(tallyunc) ' significant correlations w/ representational uncertainty out of ' num2str(sii) ' subjects, 4 pupil measures.']) 
-
 
 
 %% Set up GLM for each subject

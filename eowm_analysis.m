@@ -8,7 +8,7 @@ data_folders = files(contains(string(files),'subj'),:);
 
 addpath(genpath('../superbar_all_files'))
 
-subjs = [4:14]; 
+subjs = [4:14 16]; 
 
 data = [];
 for s = 1:length(subjs)
@@ -25,8 +25,8 @@ disp(['Mean delta for hard trials: ' num2str(mean(data.deltas(:,2)))])
 disp(['Mean RT for easy trials: ' num2str(mean(data.cond_rt(:,1)))])
 disp(['Mean RT for hard trials: ' num2str(mean(data.cond_rt(:,2)))])
 
-disp(['Mean delay period pupil size easy: ' num2str(mean(data.cond_delay_pupil_size(:,1)))])
-disp(['Mean delay period pupil size hard: ' num2str(mean(data.cond_delay_pupil_size(:,2)))])
+disp(['Mean delay period pupil size easy: ' num2str(mean(data.cleaned_pupilsize_bycondition(:,1)))])
+disp(['Mean delay period pupil size hard: ' num2str(mean(data.cleaned_pupilsize_bycondition(:,2)))])
 
 disp(['Between ' num2str(100*min(data.pct_excluded)) '% and ' num2str(100*max(data.pct_excluded)) '% trials excluded per participant.'])
 disp(['Mean(std): ' num2str(mean(data.pct_excluded)) '(' num2str(std(data.pct_excluded)) ')']);
@@ -66,7 +66,9 @@ ax = gca; ax.FontSize = 18;
 subplot(2,1,2)
 
 fulltc = [nanmean([data.easy_pres_tc_pupil_size data.easy_delay_tc_pupil_size],1);nanmean([data.hard_pres_tc_pupil_size data.hard_delay_tc_pupil_size],1)];
-full_SEM = [nanstd([data.easy_pres_tc_pupil_size data.easy_delay_tc_pupil_size],1);nanstd([data.hard_pres_tc_pupil_size data.hard_delay_tc_pupil_size],1)]./sqrt(n*120);
+full_SEM = [nanstd([data.easy_pres_tc_pupil_size data.easy_delay_tc_pupil_size],1);nanstd([data.hard_pres_tc_pupil_size data.hard_delay_tc_pupil_size],1)]./sqrt(n);
+toclean = sum(isnan(fulltc),1)>0 & sum(isnan(full_SEM),1)>0;
+fulltc(:,toclean) = []; full_SEM(:,toclean) = [];
 
 ntrim = 10;
 % trim last n points from full TC, they're very messy
@@ -74,20 +76,26 @@ fulltc = fulltc(:,1:end-ntrim);
 full_SEM = full_SEM(:,1:end-ntrim);
 
 xs = [(-length(data.easy_pres_tc_pupil_size)+1):0 1:length(data.easy_delay_tc_pupil_size)].*(2/1000);
+xs(:,toclean) = [];
 xs = xs(:,1:end-ntrim);
-
-%plot(xs,fulltc(2,:),'Color',condcolors(2,:),'LineWidth',1.5)
-errorbar(xs,fulltc(2,:),full_SEM(2,:),'Color',condcolors(2,:),'LineWidth',1.5)
-hold on
+%errorbar(xs,fulltc(2,:),full_SEM(2,:),'Color',condcolors(2,:),'LineWidth',1.5)
 %plot(xs,fulltc(1,:),'Color',condcolors(1,:),'LineWidth',1.5)
-errorbar(xs,fulltc(1,:),full_SEM(1,:),'Color',condcolors(1,:),'LineWidth',1.5)
+%errorbar(xs,fulltc(1,:),full_SEM(1,:),'Color',condcolors(1,:),'LineWidth',1.5)
+%plot([0 0],ylim,'k--','LineWidth',1.5)
+btwn_fill = [fulltc(2,:) + full_SEM(2,:), fliplr(fulltc(2,:))-fliplr(full_SEM(2,:))];
+fill_xs = [xs, fliplr(xs)];
+fill(fill_xs,btwn_fill,condcolors(2,:),'linestyle','none','facealpha',0.2,'DisplayName','Hard trials');
+hold on
+btwn_fill = [fulltc(1,:) + full_SEM(1,:), fliplr(fulltc(1,:))-fliplr(full_SEM(1,:))];
+fill(fill_xs,btwn_fill,condcolors(1,:),'linestyle','none','facealpha',0.2,'DisplayName','Easy trials');
 plot([0 0],ylim,'k--','LineWidth',1.5)
+plot(xs,fulltc(2,:),'Color',condcolors(2,:),'LineWidth',1.5)
+plot(xs,fulltc(1,:),'Color',condcolors(1,:),'LineWidth',1.5)
 title('Timecourse of pupil size (correct trials)')
 legend({'Hard','Easy'})
 xlabel('Time (seconds) [0 = delay onset]')
 ylabel('Mean % signal change: pupil size')
-ax = gca; ax.FontSize = 18;
-fig = gcf; fig.Color = 'w';
+[fig,ax] = clean_fig();
 
 % subplot(2,2,3)
 % [h,pval] = ttest(data.cond_early_pupil_size(:,1),data.cond_early_pupil_size(:,2));
@@ -179,57 +187,77 @@ ax = gca; ax.FontSize = 18;
 % Condition accuracy, withOUT t-tests
 % Not averaged across subjects, but showing all subjects' behavior
 
+
 figure
 subplot(2,2,1)
-errorbar(1, mean(data.cond_accuracy(:,1)),nanstd(data.cond_accuracy(:,1))./sqrt(n),'o','LineWidth',3,'Color',condcolors(1,:),'DisplayName','Easy trials')
+plot(1:2,data.cond_accuracy,'--','LineWidth',0.5,'Color','k')
 hold on
+errorbar(1, mean(data.cond_accuracy(:,1)),nanstd(data.cond_accuracy(:,1))./sqrt(n),'o','LineWidth',3,'Color',condcolors(1,:),'DisplayName','Easy trials')
 errorbar(2, mean(data.cond_accuracy(:,2)),nanstd(data.cond_accuracy(:,2))./sqrt(n),'o','LineWidth',3,'Color',condcolors(2,:),'DisplayName','Hard trials')
-plot(1:2,data.cond_accuracy,'LineWidth',1.25,'Color','k')
+[h,pval] = ttest(data.cond_accuracy(:,1),data.cond_accuracy(:,2));
+if pval < 0.05
+    scatter(1.5,0.95,'k*','LineWidth',1.5)
+end
 xticklabels(condlabels)
-xticks([1:2]); xlim([0.5 2.5]); 
-ax = gca; ax.FontSize = 18;
-title('% Correct');
+xticks([1:2]); xlim([0.75 2.25]); 
+plot(xlim,[0.7 0.7],'-.','LineWidth',1,'Color','k','DisplayName','Target accuracy for hard trials')
+plot(xlim,[0.9 0.9],'-.','LineWidth',1,'Color','k','DisplayName','Target accuracy for easy trials')
+[fig,ax] = clean_fig();
+ylabel('% correct');
 
 subplot(2,2,2)
-errorbar(1, mean(data.cond_rt(:,1)),nanstd(data.cond_rt(:,1))./sqrt(n),'o','LineWidth',3,'Color',condcolors(1,:),'DisplayName','Easy trials')
+plot(1:2,data.cond_rt,'--','LineWidth',0.5,'color','k')
 hold on
+errorbar(1, mean(data.cond_rt(:,1)),nanstd(data.cond_rt(:,1))./sqrt(n),'o','LineWidth',3,'Color',condcolors(1,:),'DisplayName','Easy trials')
 errorbar(2, mean(data.cond_rt(:,2)),nanstd(data.cond_rt(:,2))./sqrt(n),'o','LineWidth',3,'Color',condcolors(2,:),'DisplayName','Hard trials')
-plot(1:2,data.cond_rt,'LineWidth',1.25,'Color','k')
+[h,pval] = ttest(data.cond_rt(:,1),data.cond_rt(:,2));
+if pval < 0.05
+    scatter(1.5,0.59,'k*','LineWidth',1.5)
+end
 xticklabels(condlabels)
-xticks([1:2]); xlim([0.5 2.5]); 
-ax = gca; ax.FontSize = 18;
-title('Mean RT (seconds)')
+xticks([1:2]); xlim([0.75 2.25]); 
+[fig,ax] = clean_fig();
+ylabel('Mean RT (seconds)')
 
 subplot(2,1,2)
+fulltc = [nanmean([data.easy_pres_tc_pupil_size data.easy_delay_tc_pupil_size],1);nanmean([data.hard_pres_tc_pupil_size data.hard_delay_tc_pupil_size],1)];
+full_SEM = [nanstd([data.easy_pres_tc_pupil_size data.easy_delay_tc_pupil_size],1);nanstd([data.hard_pres_tc_pupil_size data.hard_delay_tc_pupil_size],1)]./sqrt(n);
+toclean = sum(isnan(fulltc),1)>0 & sum(isnan(full_SEM),1)>0;
+fulltc(:,toclean) = []; full_SEM(:,toclean) = [];
 
-fulltc = [nanmean([data.easy_pres_tc_pupil_size data.easy_delay_tc_pupil_size],1);nanmean([data.hard_pres_tc_pupil_size data.hard_delay_tc_pupil_size])];
-full_SEM = [nanstd([data.easy_pres_tc_pupil_size data.easy_delay_tc_pupil_size],1);nanstd([data.hard_pres_tc_pupil_size data.hard_delay_tc_pupil_size])]./sqrt(n*120);
-
-ntrim =10;
+ntrim = 10;
 % trim last n points from full TC, they're very messy
 fulltc = fulltc(:,1:end-ntrim);
 full_SEM = full_SEM(:,1:end-ntrim);
 
 xs = [(-length(data.easy_pres_tc_pupil_size)+1):0 1:length(data.easy_delay_tc_pupil_size)].*(2/1000);
+xs(:,toclean) = [];
 xs = xs(:,1:end-ntrim);
-
-% trim beginning noise too, it's a little odd how much blank space is on
-% the left there
-ntrim = 100;
-xs = xs(:,ntrim:end);
-fulltc = fulltc(:,ntrim:end);
-full_SEM(:,ntrim:end);
-
-plot(xs,fulltc(2,:),'Color',condcolors(2,:),'LineWidth',1.5)
 %errorbar(xs,fulltc(2,:),full_SEM(2,:),'Color',condcolors(2,:),'LineWidth',1.5)
-hold on
-plot(xs,fulltc(1,:),'Color',condcolors(1,:),'LineWidth',1.5)
+%plot(xs,fulltc(1,:),'Color',condcolors(1,:),'LineWidth',1.5)
 %errorbar(xs,fulltc(1,:),full_SEM(1,:),'Color',condcolors(1,:),'LineWidth',1.5)
-plot([0 0],ylim,'k--','LineWidth',1.5)
+%plot([0 0],ylim,'k--','LineWidth',1.5)
+btwn_fill = [fulltc(2,:) + full_SEM(2,:), fliplr(fulltc(2,:))-fliplr(full_SEM(2,:))];
+fill_xs = [xs, fliplr(xs)];
+fill(fill_xs,btwn_fill,condcolors(2,:),'linestyle','none','facealpha',0.2,'DisplayName','Hard trials');
+hold on
+btwn_fill = [fulltc(1,:) + full_SEM(1,:), fliplr(fulltc(1,:))-fliplr(full_SEM(1,:))];
+fill(fill_xs,btwn_fill,condcolors(1,:),'linestyle','none','facealpha',0.2,'DisplayName','Easy trials');
+plot(xs,fulltc(2,:),'Color',condcolors(2,:),'LineWidth',1.5)
+plot(xs,fulltc(1,:),'Color',condcolors(1,:),'LineWidth',1.5)
 title('Timecourse of pupil size (correct trials)')
+xlim([-0.5 12])
+plot([0 0],ylim,'k--','LineWidth',1.5)
 legend({'Hard','Easy'})
 xlabel('Time (seconds) [0 = delay onset]')
-ylabel('Mean % signal change')
-ax = gca; ax.FontSize = 18;
-fig = gcf; fig.Color = 'w';
+ylabel('Mean % signal change: pupil size')
+[fig,ax] = clean_fig();
+
+[h,p] = ttest2(data.cleaned_pupilsize_bycondition(:,1),data.cleaned_pupilsize_bycondition(:,2));
+figure; errorbar(1:2,nanmean(data.cleaned_pupilsize_bycondition),nanstd(data.cleaned_pupilsize_bycondition)/sqrt(n),'k','LineWidth',1.5)
+
+
+%% Let's do a new pupil size analysis - cleaner, more principled
+% In the style of Wiehler et al., 2022
+
 

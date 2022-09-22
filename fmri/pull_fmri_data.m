@@ -1,9 +1,9 @@
-function [] = pull_fmri_data(subjnum,sess)
+function [] = pull_fmri_data(subjnum,sess,datapath)
 
 load('subjinits.mat','subjinits')
 subject = subjinits{subjnum};
 
-datapath = ['/System/Volumes/Data/d/DATB/datb/eowm_SM/old_preprocessing_fmri/' subject '/'];
+%datapath = ['/System/Volumes/Data/d/DATB/datb/eowm_SM/old_preprocessing_fmri/' subject '/'];
 addpath(genpath(datapath))
 savepath = ['/Users/sarah/Documents/MATLAB/eowm/data/subj' num2str(subjnum)];
 
@@ -40,6 +40,5 @@ end
 
 %[anat] = niftiread(anatpath);
 save([savepath '/fmri/sess' num2str(sess) '.mat'],'funcdata','-v7.3');
-
 end
 

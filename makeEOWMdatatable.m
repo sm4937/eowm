@@ -20,7 +20,7 @@ rts = []; conditions = []; wm_ang_all = []; correct = [];
 
 for run = 1:length(allp)
     p = allp{run}.p; %load up everything from p
-    correct = [correct; p.correct(:,p.run+1)]; 
+    correct = [correct; p.correct(:,p.run+1)];
     conditions = [conditions; p.conditions];
     deltas = p.deltas_all(1:end-1,:); % the final deltas_all is unused
     target_accuracy = p.target_accuracy;
@@ -52,28 +52,34 @@ for q = 1:4
 end
 t.deltas = deltas(end,:);
 
-% grab pupil information 
+% grab pupil information
 subjs_with_wrong_freq = [10, 11];
+% did I fix this issue correctly?
+% TO DO: CHECK THIS ANALYSIS AGAIN
 t = et_analysis(t,conditions,correct_vec,subjs_with_wrong_freq);
 
 %check out the staircase
-figure
-subplot(1,2,1)
-plot(1:size(deltas,1),deltas(:,1),'b')
-hold on
-plot(1:size(deltas,1),deltas(:,2),'r')
-legend({'Easy','Hard','Easy target','Hard target'},'Location','Best')
-title(['Subj ' num2str(subjnum) ' deltas thru staircase'])
+plot_flag = false;
+if plot_flag
+    figure
+    subplot(1,2,1)
+    plot(1:size(deltas,1),deltas(:,1),'b')
+    hold on
+    plot(1:size(deltas,1),deltas(:,2),'r')
+    legend({'Easy','Hard','Easy target','Hard target'},'Location','Best')
+    title(['Subj ' num2str(subjnum) ' deltas thru staircase'])
+    
+    subplot(1,2,2)
+    plot(1:length(cum_accuracy),cum_accuracy,'k')
+    hold on
+    plot(1:length(cum_cond_accuracy),cum_cond_accuracy(:,1),'b')
+    plot(1:length(cum_cond_accuracy),cum_cond_accuracy(:,2),'r')
+    plot(xlim,[target_accuracy(1) target_accuracy(1)],'b--')
+    plot(xlim,[target_accuracy(2) target_accuracy(2)],'r--')
+    ylabel('p(correct)'); xlabel('trial #')
+    title('Accuracy over trials')
+    fig = gcf; fig.Color = 'w';
+end
 
-subplot(1,2,2)
-plot(1:length(cum_accuracy),cum_accuracy,'k')
-hold on
-plot(1:length(cum_cond_accuracy),cum_cond_accuracy(:,1),'b')
-plot(1:length(cum_cond_accuracy),cum_cond_accuracy(:,2),'r')
-plot(xlim,[target_accuracy(1) target_accuracy(1)],'b--')
-plot(xlim,[target_accuracy(2) target_accuracy(2)],'r--')
-ylabel('p(correct)'); xlabel('trial #')
-title('Accuracy over trials')
-fig = gcf; fig.Color = 'w';
 
 end

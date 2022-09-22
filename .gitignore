@@ -18,6 +18,5 @@
 **/*.pdf
 
 #folders not to go into
-fmri/*
 data/*
 fmri/PSC/*
