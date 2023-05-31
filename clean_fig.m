@@ -7,6 +7,8 @@ ax = gca; fig = gcf;
 fig.Color = 'w';
 ax.TickLength = [0 0];
 ax.FontSize = 14;
+% legend('Location','Best')
+% legend('Box','Off')
 
 
 end

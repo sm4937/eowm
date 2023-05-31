@@ -40,6 +40,7 @@ for sess = 1:sessions
         all_y_coords = [NaN; reshape(repmat(behav.p.wm_coords(:,2),1,7)',84,1); NaN];
         all_resps = [NaN; reshape(repmat(behav.p.resp,1,7)',84,1); NaN];
         all_trials = repmat([1:12],7,1); all_trials = [0; all_trials(:); 0];
+        all_correct = [NaN; reshape(repmat(behav.p.correct(:,run+1),1,7)',84,1); NaN];
         % 0 padding and extra seconds added on come from wait time at start
         % and end of each run
 
@@ -47,7 +48,9 @@ for sess = 1:sessions
             slice = times(tt);
             idx = find(all_times<slice);
             if ~isempty(idx)
-                long_run = [long_run; subjnum sess r all_trials(idx(end)) slice all_events(idx(end)) all_conds(idx(end)) all_ang(idx(end)) all_x_coords(idx(end)) all_y_coords(idx(end)) all_resps(idx(end))];
+                long_run = [long_run; subjnum sess r all_trials(idx(end)) slice all_events(idx(end)) all_conds(idx(end)) ...
+                    all_ang(idx(end)) all_x_coords(idx(end)) all_y_coords(idx(end)) all_resps(idx(end)) ...
+                    all_correct(idx(end))];
             end
         end
 
@@ -61,7 +64,7 @@ for sess = 1:sessions
         long_run = [long_run delay_times];
         long = [long; long_run];
 
-    end
+    end %of loop over runs
 end % end of loop over session    
     
 % label in table for clarity
@@ -77,7 +80,8 @@ full.stimval = long(:,8);
 full.x_target = long(:,9);
 full.y_target = long(:,10);
 full.resp = long(:,11);
-full.delay_times = long(:,12);
+full.correct = long(:,12);
+full.delay_times = long(:,13);
 full.overalltrial = cumsum([0; diff(full.trial)~=0]);
 full.overallrun = cumsum([1; diff(full.run)~=0]);
 

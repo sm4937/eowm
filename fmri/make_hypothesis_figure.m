@@ -5,74 +5,116 @@ condcolors = [190 0 110; 0 110 190]./255;
 
 xs = -179:180;
 
-hard_error = -1;
-hard_precision = 25;
+hard_error = 30;
+hard_precision = 30;
 
-easy_error = 1;
-easy_precision = 25;
+easy_error = 30;
+easy_precision = 30;
 
 figure; subplot(2,2,1)
 hard_dist = normpdf(xs,hard_error,hard_precision);
 easy_dist = normpdf(xs,easy_error,easy_precision); 
-plot(xs,hard_dist,'LineWidth',1.5,'Color',condcolors(1,:),'DisplayName','Hard trial')
+plot(xs,hard_dist,'LineWidth',1.5,'Color',condcolors(1,:),'DisplayName','More effort')
 hold on
-plot(xs,easy_dist,'LineWidth',1.5,'Color',condcolors(2,:),'DisplayName','Easy trial')
+plot(xs,easy_dist,'LineWidth',1.5,'Color',condcolors(2,:),'DisplayName','Less effort')
+plot([0 0],ylim,'k--')
 xlabel('Representation error')
-ax = gca; ax.FontSize = 12;
-title('No changes based on trial type')
+clean_fig();
 
-hard_error = 0;
-hard_precision = 25;
 
-easy_error = 70;
-easy_precision = 25;
+hard_error = 30;
+hard_precision = 30;
+
+easy_error = 45;
+easy_precision = 30;
 
 subplot(2,2,2)
 hard_dist = normpdf(xs,hard_error,hard_precision);
 easy_dist = normpdf(xs,easy_error,easy_precision); 
-plot(xs,hard_dist,'LineWidth',1.5,'Color',condcolors(1,:),'DisplayName','Hard trial')
+plot(xs,hard_dist,'LineWidth',1.5,'Color',condcolors(1,:),'DisplayName','More effort')
 hold on
-plot(xs,easy_dist,'LineWidth',1.5,'Color',condcolors(2,:),'DisplayName','Easy trial')
+plot(xs,easy_dist,'LineWidth',1.5,'Color',condcolors(2,:),'DisplayName','Less effort')
+plot([0 0],ylim,'k--')
 xlabel('Representation error')
-ax = gca; ax.FontSize = 12;
-title('Hard trials more accurate')
+clean_fig();
 
 
-hard_error = -1;
-hard_precision = 25;
+hard_error = 30;
+hard_precision = 30;
 
-easy_error = 1;
-easy_precision = 50;
+easy_error = 30;
+easy_precision = 45;
 
 subplot(2,2,3)
 hard_dist = normpdf(xs,hard_error,hard_precision);
 easy_dist = normpdf(xs,easy_error,easy_precision); 
-plot(xs,hard_dist,'LineWidth',1.5,'Color',condcolors(1,:),'DisplayName','Hard trial')
+plot(xs,hard_dist,'LineWidth',1.5,'Color',condcolors(1,:),'DisplayName','More effort')
 hold on
-plot(xs,easy_dist,'LineWidth',1.5,'Color',condcolors(2,:),'DisplayName','Easy trial')
+plot(xs,easy_dist,'LineWidth',1.5,'Color',condcolors(2,:),'DisplayName','Less effort')
+plot([0 0],ylim,'k--')
 xlabel('Representation error')
-ax = gca; ax.FontSize = 12;
-legend('Location','Best')
-title('Hard trials more precise')
+clean_fig(); 
 
-hard_error = 0;
-hard_precision = 25;
 
-easy_error = 70;
-easy_precision = 50;
+hard_error = 30;
+hard_precision = 30;
+
+easy_error = 45;
+easy_precision = 45;
 
 subplot(2,2,4)
 hard_dist = normpdf(xs,hard_error,hard_precision);
 easy_dist = normpdf(xs,easy_error,easy_precision); 
-plot(xs,hard_dist,'LineWidth',1.5,'Color',condcolors(1,:),'DisplayName','Hard trial')
+plot(xs,hard_dist,'LineWidth',1.5,'Color',condcolors(1,:),'DisplayName','More effort')
 hold on
-plot(xs,easy_dist,'LineWidth',1.5,'Color',condcolors(2,:),'DisplayName','Easy trial')
+plot(xs,easy_dist,'LineWidth',1.5,'Color',condcolors(2,:),'DisplayName','Less effort')
+plot([0 0],ylim,'k--')
 xlabel('Representation error')
-ax = gca; ax.FontSize = 12;
-legend('Location','Best')
-title('Hard trials more accurate & precise')
-fig = gcf; fig.Color = 'w';
+clean_fig(); 
 
+%% Make one Gaussian and change it around
+
+location = 180;
+
+hard_error = 0+location;
+hard_precision = 30;
+
+easy_error = 15+location;
+easy_precision = 45;
+
+figure();
+subplot(3,1,1)
+hard_dist = normpdf(xs,hard_error,hard_precision);
+plot(xs,hard_dist,'LineWidth',1.5,'Color',condcolors(1,:),'DisplayName','More effort')
+hold on
+plot([hard_error hard_error], [0,max(hard_dist)], '--k','DisplayName','\mu')
+xcoord = hard_precision;
+plot([hard_error xcoord],[hard_dist(xs==xcoord) hard_dist(xs==xcoord)],'--k','DisplayName','\sigma')
+xlabel('Representation error'); ylabel('Posterior probability')
+yticks([]); %xticks([-180 0 180])
+clean_fig(); 
+
+subplot(3,1,2)
+hard_dist = normpdf(xs,easy_error,hard_precision);
+plot(xs,hard_dist,'LineWidth',1.5,'Color',condcolors(1,:),'DisplayName','More effort')
+hold on
+plot([easy_error easy_error], [0,max(hard_dist)], '--k','DisplayName','\mu')
+xcoord = easy_error+hard_precision;
+plot([easy_error xcoord],[hard_dist(xs==xcoord) hard_dist(xs==xcoord)],'--k','DisplayName','\sigma')
+xlabel('Representation error'); ylabel('Posterior probability')
+yticks([]); %xticks([-180 0 180])
+clean_fig(); 
+
+subplot(3,1,3)
+hard_dist = normpdf(xs,easy_error,easy_precision);
+plot(xs,hard_dist,'LineWidth',1.5,'Color',condcolors(1,:),'DisplayName','More effort')
+hold on
+plot([easy_error easy_error], [0,max(hard_dist)], '--k','DisplayName','\mu')
+xcoord = easy_error+easy_precision;
+plot([easy_error xcoord],[hard_dist(xs==xcoord) hard_dist(xs==xcoord)],'--k','DisplayName','\sigma')
+xlabel('Representation error'); ylabel('Posterior probability')
+yticks([]); %xticks([-180 0 180])
+clean_fig(); 
 
 %% Make theory figure
 

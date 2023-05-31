@@ -141,6 +141,10 @@ for sess = 1:max(timing.sess)
                 elseif cond == 2
                     eval(['t_' num2str(predictors(p)) '_hard(overallrun,trial) = this_trial.times(this_trial.events==predictors(p));'])
                 end
+                
+                % ADD CODE HERE TO SAVE DIFFERENT TEXT FILE FOR EACH TRIAL
+                % x EACH PREDICTOR TYPE
+                % THREE TEXT FILES PER TRIAL
             end
             
         end
@@ -151,12 +155,12 @@ t_1_easy = round(t_1_easy,2); t_1_hard = round(t_1_hard,2);
 t_3_easy = round(t_3_easy,2); t_3_hard = round(t_3_hard,2);
 t_4_easy = round(t_4_easy,2); t_4_hard = round(t_4_hard,2);
 
-writeToTextFile(t_1_easy,[stimdir '/cuestim_easy.txt'])
-writeToTextFile(t_1_hard,[stimdir '/cuestim_hard.txt'])
-writeToTextFile(t_3_easy,[stimdir '/delay_easy.txt'])
-writeToTextFile(t_3_hard,[stimdir '/delay_hard.txt'])
-writeToTextFile(t_4_easy,[stimdir '/resp_easy.txt'])
-writeToTextFile(t_4_hard,[stimdir '/resp_hard.txt'])
+write_to_text_file(t_1_easy,[stimdir '/cuestim_easy.txt'])
+write_to_text_file(t_1_hard,[stimdir '/cuestim_hard.txt'])
+write_to_text_file(t_3_easy,[stimdir '/delay_easy.txt'])
+write_to_text_file(t_3_hard,[stimdir '/delay_hard.txt'])
+write_to_text_file(t_4_easy,[stimdir '/resp_easy.txt'])
+write_to_text_file(t_4_hard,[stimdir '/resp_hard.txt'])
 
 rootdir = ['/System/Volumes/Data/d/DATB/datb/eowm_SM/old_preprocessing_fmri/' inits '/GLMresults'];
 

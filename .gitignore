@@ -20,3 +20,5 @@
 #folders not to go into
 data/*
 fmri/PSC/*
+fmri/TAFKAP_HPC/*
+fmri/TAFKAP_bycond/*

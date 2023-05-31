@@ -56,7 +56,7 @@ t.deltas = deltas(end,:);
 subjs_with_wrong_freq = [10, 11];
 % did I fix this issue correctly?
 % TO DO: CHECK THIS ANALYSIS AGAIN
-t = et_analysis(t,conditions,correct_vec,subjs_with_wrong_freq);
+t = eyetracking_analysis(t,conditions,correct_vec,subjs_with_wrong_freq);
 
 %check out the staircase
 plot_flag = false;
