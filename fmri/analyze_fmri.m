@@ -91,7 +91,6 @@ for ii = 1:length(ROI_labels)
     label = strrep(ROI_labels{ii},'_','-');
     ROI_labels{ii} = label;
 end
-ROI_labels{1} = 'V1-V2-V3';
 
 %% % if data not already pulled, pull it
 
@@ -302,7 +301,7 @@ for area = 1:size(hemi_list,1)
             end % of cycling over sessions
 
             eval(['delay_mean_PSC = delay_mean_PSC_subj' num2str(subjnum) ';'])
-            save(['PSC/late_delay_mean_PSC_subj' num2str(subjnum) '_VEselected' spec '.mat'],'delay_mean_PSC')
+            %save(['PSC/late_delay_mean_PSC_subj' num2str(subjnum) '_VEselected' spec '.mat'],'delay_mean_PSC')
             eval(['means = delay_mean_PSC_subj' num2str(subjnum) '.' char(ROI_name{1}) ';'])
             % take mean of means, over 2 x 2 in RF vs trial type
 
@@ -333,7 +332,7 @@ for area = 1:size(hemi_list,1)
             load(['PSC/late_delay_mean_PSC_trialtypes_subj' num2str(subjnum) '_VEselected_foveaROIs.mat'],'delay_trialtype_PSC')
             eval(['delay_trialtype_PSC.' char(ROI_name{1}) ' = trialtypemeans(sii,:);'])
             eval(['delay_trialtype_PSC.' char(ROI_name{1}) '_SEM = trialtypeSEMs(sii,:);'])
-            save(['PSC/late_delay_mean_PSC_trialtypes_subj' num2str(subjnum) '_VEselected_foveaROIs.mat'],'delay_trialtype_PSC')
+            %save(['PSC/late_delay_mean_PSC_trialtypes_subj' num2str(subjnum) '_VEselected_foveaROIs.mat'],'delay_trialtype_PSC')
 
         end % end of cutting subjects out who don't have this ROI
         
@@ -635,7 +634,7 @@ end
 %% Run TAFKAP on data, get estimation accuracy out
 
 % Example subject
-subjnum = 4;
+subjnum = 6;
 % % Grab task data
 load(['task_subj' num2str(subjnum) '.mat'])
 eval(['task = task_subj' num2str(subjnum) ';'])
@@ -677,7 +676,7 @@ ROI_labels{1} = 'V1-V2-V3';
 stimval = task.stimval(~isnan(task.stimval));
 
 figure; 
-plotnum = [1 2 3 7 8 9];
+plotnum = [1 2 3 7 8 9 13 14 15];
 for rii = 1:length(ROI_list)
     
     ROI_name = ROI_list{rii};
@@ -719,9 +718,9 @@ example_hard_trial = randsample(find(task_trimmed.cond==2),1);
 example_easy_trial = randsample(find(task_trimmed.cond==1),1);
 xs = -179:180;
 
-ROI_labels{1} = 'V1-3';
-ROI_labels{3} = 'IPS0-1';
-ROI_labels{4} = 'IPS2-3';
+ROI_labels{2} = 'V1-3';
+ROI_labels{4} = 'IPS0-1';
+ROI_labels{5} = 'IPS2-3';
 
 error = NaN(240,n);
 unc = NaN(240,n);
@@ -897,6 +896,129 @@ xticklabels(ROI_labels)
 xlim([0.5 length(ROI_list)+0.5])
 ylim([-0.2 star_height+0.1])
 
+%% Is decoding error & unc correlated across regions?
+
+ROI_list = {'V1_V2_V3','V3AB','IPS0_IPS1'};
+subjlist = [4:14 16]; N = length(subjlist);
+
+error = NaN(240,N,length(ROI_list));
+
+for rii = 1:length(ROI_list)
+    ROI_name = ROI_list{rii};
+    
+    for sii = 1:N
+        
+        load(['TAFKAP_subj' num2str(subjlist(sii)) '_foveaROIs.mat'],'TAFKAP_output')
+        load(['task_subj' num2str(subjlist(sii)) '.mat'])
+        eval(['task = task_subj' num2str(subjlist(sii)) ';'])
+        task_trimmed = task(~isnan(task.stimval),:);
+        
+        eval(['error(1:length(task_trimmed.stimval),sii,rii) = ((TAFKAP_output.' ROI_name '.est).*2)-(task_trimmed.stimval);'])
+        eval(['unc(1:length(task_trimmed.stimval),sii,rii) = TAFKAP_output.' ROI_name '.unc;'])
+                
+        
+    end
+    
+end
+
+% is decoding error correlated across seed regions (Top-Down Control Project w/ SL)?
+
+for sii = 1:N
+    
+    figure(10)
+    subplot(4,4,sii+4)
+    scatter(error(:,sii,1),error(:,sii,2))
+    cleaned_up_error = error(sum(~isnan(error(:,sii,:)),3)==3,sii,:);
+    [r,p] = corr(cleaned_up_error(:,:,1),cleaned_up_error(:,:,2));
+    xlabel('Decoding error V1-V2-V3')
+    ylabel('Decoding error V3AB')
+    title(['r = ' num2str(round(r,2)) ', p = ' num2str(round(p,2))])
+    if p < 0.05
+        lsline
+    end
+    clean_fig()
+    rs(sii,1) = r;
+    
+    figure(11)
+    subplot(4,4,sii+4)
+    scatter(error(:,sii,1),error(:,sii,3))
+    [r,p] = corr(cleaned_up_error(:,:,1),cleaned_up_error(:,:,3));
+    xlabel('Decoding error V1-V2-V3')
+    ylabel('Decoding error IPS0-1')
+    title(['r = ' num2str(round(r,2)) ', p = ' num2str(round(p,2))])
+    if p < 0.05
+        lsline
+    end
+    clean_fig()
+    rs(sii,2) = r;
+    
+    figure(12)
+    subplot(4,4,sii+4)
+    scatter(error(:,sii,2),error(:,sii,3))
+    [r,p] = corr(cleaned_up_error(:,:,2),cleaned_up_error(:,:,3));
+    xlabel('Decoding error V3AB')
+    ylabel('Decoding error IPS0-1')
+    %title(['Subject ' num2str(subjlist(sii)))
+    title(['r = ' num2str(round(r,2)) ', p = ' num2str(round(p,2))])
+    if p < 0.05
+        lsline
+    end
+    clean_fig()
+    rs(sii,3) = r;
+    
+end
+
+
+figure(10)
+subplot(4,1,1)
+errorbar(1:3,nanmean(rs),nanstd(rs)./sqrt(N),'*k','LineWidth',2)
+xticks(1:3)
+xticklabels({'V1-3 vs. V3AB','V1-3 vs. IPS0-1','V3AB vs. IPS0-1'})
+[h,p] = ttest(rs);
+xlim([0.75 3.25])
+hold on
+x_values = 1:3;
+y_values = ones(1,3).*(max(nanmean(rs))+0.05);
+x_values(p>0.05) = []; y_values(p>0.05) = [];
+scatter(x_values,y_values,'k*')
+clean_fig()
+ylabel('Mean pearson R')
+xlabel('Comparison')
+
+figure(11)
+subplot(4,1,1)
+errorbar(1:3,nanmean(rs),nanstd(rs)./sqrt(N),'*k','LineWidth',2)
+xticks(1:3)
+xticklabels({'V1-3 vs. V3AB','V1-3 vs. IPS0-1','V3AB vs. IPS0-1'})
+[h,p] = ttest(rs);
+xlim([0.75 3.25])
+hold on
+x_values = 1:3;
+y_values = ones(1,3).*(max(nanmean(rs))+0.05);
+x_values(p>0.05) = []; y_values(p>0.05) = [];
+scatter(x_values,y_values,'k*')
+clean_fig()
+ylabel('Mean pearson R')
+xlabel('Comparison')
+
+figure(12)
+subplot(4,1,1)
+errorbar(1:3,nanmean(rs),nanstd(rs)./sqrt(N),'*k','LineWidth',2)
+xticks(1:3)
+xticklabels({'V1-3 vs. V3AB','V1-3 vs. IPS0-1','V3AB vs. IPS0-1'})
+[h,p] = ttest(rs);
+xlim([0.75 3.25])
+hold on
+x_values = 1:3;
+y_values = ones(1,3).*(max(nanmean(rs))+0.05);
+x_values(p>0.05) = []; y_values(p>0.05) = [];
+scatter(x_values,y_values,'k*')
+clean_fig()
+ylabel('Mean pearson R')
+xlabel('Comparison')
+
+
+
 %% Supplementary analyses of TAFKAP read-outs
 
 % does TAFKAP decoding predict accuracy? probably...
@@ -1065,13 +1187,17 @@ end
 %% Analysis of TAFKAP measures alongside trial-by-trial pupil dilation
 % for each subject, correlate pupil size and memory precision
 % memory precision alreayd pulled trial-by-trial above
+close all; clear all;
+
 load('../data/pupil.mat')
 
 subjlist = unique(pupil.subj);
+subjlist(subjlist==11) = [];
 n = length(subjlist);
 
 spec = '_foveaROIs';
-clear ROI_list
+clear ROI_list boot_p_values correlation_timecourse
+error = NaN(240,n);
 ROI_list{1} = 'V3AB';
 
 figure; count = 0; xtick_list = [];
@@ -1097,36 +1223,40 @@ for ROI = 1:length(ROI_list)
         eval(['error(1:length(task_trimmed.stimval),sii) = get_angular_distance((TAFKAP_output.' ROI_name '.est).*2,task_trimmed.stimval);'])
         eval(['unc(1:length(task_trimmed.stimval),sii) = TAFKAP_output.' ROI_name '.unc;'])
         
-        X = error(pupil.trial_indices(sii,1:length(error))==1,sii);
-        Y = pupil.delay_betas(sii,1:length(error));
-        Y = Y(pupil.trial_indices(sii,1:length(error))==1);
+        pupil_subj_index = find(pupil.subj==subjnum);
+        X = error(pupil.trial_indices(pupil_subj_index,1:length(error))==1,sii);
+        %Y = pupil.delay_betas(sii,1:length(error));
+        full_timecourses = pupil.tbt_mean{pupil_subj_index};
+        Y = nanmean(full_timecourses,2);
         X = X(~isnan(Y));
         Y = Y(~isnan(Y));
-        ROI_pupil_influence_error(ROI,sii) = corr(X,Y');
+        ROI_pupil_influence_error(ROI,sii) = corr(X,Y);
         
-%         X_unc = unc(pupil.trial_indices(sii,1:length(unc))==1,sii);
-%         Y_unc = pupil.delay_betas(sii,1:length(unc));
-%         Y_unc = Y(pupil.trial_indices(sii,1:length(unc))==1);
-%         ROI_pupil_influence_unc(ROI,sii) = corr(X_unc,Y_unc');
+        X_unc = unc(pupil.trial_indices(pupil_subj_index,1:length(unc))==1,sii);
+        full_timecourses = pupil.tbt_mean{pupil_subj_index};
+        Y_unc = nanmean(full_timecourses,2);
+        X_unc = X_unc(~isnan(Y_unc));
+        Y_unc = Y_unc(~isnan(Y_unc));
+        ROI_pupil_influence_unc(ROI,sii) = corr(X_unc,Y_unc);
         
         if plot_flag
             figure(11)
             subplot(4,3,sii)
             scatter(X,Y,'filled')
             lsline
-            xlabel('Delay period pupil beta')
-            ylabel('V3AB decoder error')
+            ylabel('Mean pupil size (z-scored)')
+            xlabel('V3AB decoder error')
             title(['Subject ' num2str(subjnum)])
-            clean_fig()
+            clean_fig();
             
-%             figure(12)
-%             subplot(4,3,sii)
-%             scatter(X_unc,Y_unc,'filled')
-%             lsline
-%             xlabel('Delay period pupil beta')
-%             ylabel('V3AB decoder uncertainty')
-%             title(['Subject ' num2str(subjnum)])
-%             clean_fig()
+            figure(12)
+            subplot(4,3,sii)
+            scatter(X_unc,Y_unc,'filled')
+            lsline
+            ylabel('Mean pupil size (z-scored)')
+            xlabel('V3AB decoder uncertainty')
+            title(['Subject ' num2str(subjnum)])
+            clean_fig();
             
         end
         
@@ -1135,32 +1265,56 @@ for ROI = 1:length(ROI_list)
         % over time (when in trial is pupil size predictive of decoding
         % error?)
         
-        trials_smoothed = pupil.smoothed_trial_timecourse(sii,:);
-        X = error(pupil.trial_indices(sii,1:length(error))==1,sii);
+        trials_smoothed = pupil.full_timecourses{pupil_subj_index}(:,2:end);
+        % residuals from a basic PUPIL GLM
+        % smoothed, blinks removed, incorrect & saccade trials removed
+        X = error(pupil.trial_indices(pupil_subj_index,1:length(error))==1,sii);
         
-        nbins = size(trials_smoothed{1},2); 
+        endvalue = 7000;
+        nbins = 100;
+        bins = linspace(1,endvalue,nbins);
         nboot = 1000;
         
-        for b = 1:(nbins-7)
-            [correlation_timecourse(sii,b),p] = corr(X,trials_smoothed{1}(:,b));
+        for bin = 1:nbins
+            b = floor(bins(bin));
             
-            total_significant = 0;
-            value_bin = correlation_timecourse(sii,b);
-            for boot = 1:nboot
-                
-                 [r,~] = corr(X(randperm(length(X),length(X))),trials_smoothed{1}(:,b));
-                 if value_bin < 0 
-                    total_significant = total_significant + (r <= value_bin);
-                 elseif value_bin > 0 
-                     total_significant = total_significant + (r >= value_bin);
-                 elseif isnan(value_bin) | isnan(r)
-                     total_significiant = total_significant + 1;
-                 end
-
+            X = error(pupil.trial_indices(pupil_subj_index,1:length(error))==1,sii);
+            Y = trials_smoothed(:,b);
+            X = X(~isnan(Y));
+            Y = Y(~isnan(Y));
+            
+            try
+                [correlation_timecourse(sii,bin),p] = corr(X,Y);
+            catch
+                correlation_timecourse(sii,bin) = NaN;
             end
             
-            boot_p_values(sii,b) = total_significant./nboot;
-        end
+            total_significant = 0;
+            value_bin = correlation_timecourse(sii,bin);
+            
+            if isnan(value_bin)
+                total_significant = nboot; % p value of 1
+            else % p-value might be less than 1
+                for boot = 1:nboot
+                    
+                    X_boot = X(randperm(length(X),length(X)));
+                    
+                    [r,~] = corr(X_boot,Y);
+                    if value_bin < 0
+                        total_significant = total_significant + (r <= value_bin);
+                    elseif value_bin > 0
+                        total_significant = total_significant + (r >= value_bin);
+                    elseif isnan(value_bin) | isnan(r)
+                        total_significant = total_significant + 1;
+                    end
+                    
+                end
+                            
+            end % of excluding timepoints w/ no pupil data
+            
+            boot_p_values(sii,bin) = total_significant./nboot;
+            
+        end %of cycling over pupil sample timecourse points
         
         figure(13)
         subplot(4,3,sii)
@@ -1171,15 +1325,13 @@ for ROI = 1:length(ROI_list)
         %[h,p] = ttest2(correlation_timecourse,null_distribution);
         scatter(find(boot_p_values(sii,:)<0.025),-0.3*ones(sum(boot_p_values(sii,:)<0.025),1),'*k')
         ylim([-0.31 0.31])
-        xlabel('Time (seconds)')
+        xticks([0 4000 7500]./nbins)
+        xticklabels([0 4000 7500]./500)
+        xlabel('Time (seconds since stimulus onset)')
         ylabel('Correlation w/ TAFKAP error (r)')
-        spacing = 3; timepoints = [0:spacing:((nbins*300)/1000)];
-        % spacing between xticks (in seconds)
-        xticklabels(timepoints)
-        xticks(0:floor(nbins./spacing):nbins)
         %ms_per_bin = 300;
         title(['Subject ' num2str(subjnum)])
-        clean_fig()
+        clean_fig();
         
 
     end % of cycling over subjects
@@ -1192,13 +1344,25 @@ end %of cycling over ROIs
 
 figure
 for ROI = 1:length(ROI_list)
-    hold on
+    
     scatter(ROI.*ones(n,1),ROI_pupil_influence_error(ROI,:))
+    hold on
+    errorbar(1,nanmean(ROI_pupil_influence_error(ROI,:)),nanstd(ROI_pupil_influence_error(ROI,:))./sqrt(n),'k','LineWidth',2)
+    
+    scatter(2.*ROI.*ones(n,1),ROI_pupil_influence_unc(ROI,:))
+    errorbar(2,nanmean(ROI_pupil_influence_unc(ROI,:)),nanstd(ROI_pupil_influence_unc(ROI,:))./sqrt(n),'k','LineWidth',2)
+    
     ylabel('Corr of delay period pupil & TAFKAP error')
     xlabel('ROI')
     xticklabels(ROI_list)
-    clean_fig()
+    xlim([0.5 2.5])
+
+    clean_fig();
+    
 end
+
+[h,p] = ttest(ROI_pupil_influence_error(ROI,:));
+[h,p] = ttest(ROI_pupil_influence_unc(ROI,:));
 
 
 %% Set up GLM for each subject

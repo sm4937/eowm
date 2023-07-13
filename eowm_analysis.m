@@ -8,12 +8,15 @@ data_folders = files(contains(string(files),'subj'),:);
 
 addpath(genpath('../superbar_all_files'))
 
-subjs = [4:14 16]; 
+subjs = [4:14 16];
+pupil.subj = subjs';
 
 data = [];
 for s = 1:length(subjs)
     subj = subjs(s);
     data = [data; makeEOWMdatatable(subj)];
+    pupil.tbt_mean{s} = nanmean(data.cleaned_pupilsize_by_trial{s},2);
+    pupil.full_timecourses{s} = data.cleaned_pupilsize_by_trial{s};
 end
 n = length(data.subj); condlabels = {'Easy','Hard'}; 
 condcolors = [190 0 110; 0 110 190]./255; condcolors = flip(condcolors,1);
@@ -28,9 +31,8 @@ disp(['Mean RT for hard trials: ' num2str(mean(data.cond_rt(:,2)))])
 disp(['Between ' num2str(100*min(data.pct_excluded)) '% and ' num2str(100*max(data.pct_excluded)) '% trials excluded per participant.'])
 disp(['Mean(std): ' num2str(mean(data.pct_excluded)) '(' num2str(std(data.pct_excluded)) ')']);
 
-pupil.subj = subjs';
-%pupil.delay_betas = data.delay_betas;
-%pupil.stim_betas = data.stim_betas;
+pupil.delay_betas = data.delay_betas;
+pupil.stim_betas = data.stim_betas;
 pupil.trial_indices = data.pupil_trial_indices;
 save('data/pupil.mat','pupil')
 
@@ -117,14 +119,14 @@ ylabel('Z-scored pupil size')
 
 [h,p] = ttest2(nanmean(easy_timecourses_delay,2),nanmean(hard_timecourses_delay,2));
 % is there a significant difference over whole delay period?
-% no. p = 0.6
+% no. p = 0.72
 % nothing in early or late delay period, either
 [h,p] = ttest2(nanmean(easy_timecourses_delay(:,1:3000),2),nanmean(hard_timecourses_delay(:,1:3000),2));
 [h,p] = ttest2(nanmean(easy_timecourses_delay(:,3001:6000),2),nanmean(hard_timecourses_delay(:,3001:6000),2));
 
 [h,p] = ttest2(nanmean(easy_timecourses_stim,2),nanmean(hard_timecourses_stim,2));
 % is there a significant difference over stimulus presentation period?
-% no. p = 0.4
+% no. p = 0.41
 
 
 %% Let's do a new pupil size analysis - cleaner, more principled
@@ -145,33 +147,3 @@ clean_fig();
 %what's up with the 0 beta weights for x-y position? 
 % NaNs?
 
-
-% In the style of Wiehler et al., 2022
-% % regression-based, cleaner, within-subject-type analysis
-% figure
-% subplot(2,1,1)
-% bar([nanmean(data.easy_delay_beta), nanmean(data.hard_delay_beta)],'w')
-% hold on
-% scatter(ones(n,1),data.easy_delay_beta,[],condcolors(1,:),'Filled')
-% scatter(2.*ones(n,1),data.hard_delay_beta,[],condcolors(2,:),'Filled')
-% xticklabels({'Easy','Hard'}); title('Delay period pupil beta')
-% clean_fig();
-% [h,p] = ttest(data.easy_delay_beta,data.hard_delay_beta);
-% if p < 0.05
-%     plot(1.5,nanmean([nanmean(data.easy_delay_beta), nanmean(data.hard_delay_beta)])+0.2,'*k')
-% end
-% 
-% subplot(2,1,2)
-% bar([nanmean(data.easy_stim_beta), nanmean(data.hard_stim_beta)],'w')
-% hold on
-% scatter(ones(n,1),data.easy_stim_beta,[],condcolors(1,:),'Filled')
-% scatter(2.*ones(n,1),data.hard_stim_beta,[],condcolors(2,:),'Filled')
-% xticklabels({'Easy','Hard'}); title('Stim presentation beta')
-% [h,p] = ttest(data.easy_stim_beta,data.hard_stim_beta);
-% if p < 0.05
-%     plot(1.5,nanmean([nanmean(data.easy_stim_beta), nanmean(data.hard_stim_beta)])+0.2,'*k')
-% end
-% clean_fig();
-% 
-% % Across the board, group-level analyses do not work out
-% % Maybe individual analyses will work in TAFKAP precision.

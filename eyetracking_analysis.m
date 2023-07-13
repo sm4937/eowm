@@ -31,11 +31,25 @@ end
 % opposed to okay ones (during ITI)
 
 ntrials = length(ii_sess.Pupil); 
-saccade_flag = false(ntrials,1);
+saccade_flag = false(240,1);
+eye_data_exists = false(240,1);
 
 files = dir(['data/subj' num2str(subj) '/eyetracking/']);
 filenames = string(char(files.name));
 sacc_files = filenames(contains(filenames,'_preproc_sacc.mat'));
+
+files_behav = dir(['data/subj' num2str(subj) '/']);
+filenames_behav = string(char(files_behav.name));
+ntrials_sess1 = 120;
+% make sure you have the correct number of trials from within session 1
+% since not every subject did 10 runs in sess 1
+if sum(contains(filenames_behav,'run9_sess1'))<1
+    ntrials_sess1 = 108;
+    if sum(contains(filenames_behav,'run8_sess1'))<1
+        ntrials_sess1 = 96;
+    end
+end
+
 for f = 1:length(sacc_files)
     file = char(sacc_files(f,:));
     file = strrep(file,' ','');
@@ -44,6 +58,12 @@ for f = 1:length(sacc_files)
     sess = str2num(sess{1}{1});
     run = regexp(file,'_run(\d*)_','tokens');
     run = str2num(run{1}{1})+1;
+    
+    temp_numbers = [1:12] + (12*(run-1)) + (ntrials_sess1*(sess-1));
+    % as this was before, it was going to be wrong for subjects with fewer
+    % than 10 runs per session (like subject 8; now ntrials_sess1 is replacing
+    % the number 120)
+    eye_data_exists(temp_numbers) = true;
     
     epoch_start = ii_sacc.epoch_start;
     fixation_mandatory = [1 2 3 4];
@@ -62,14 +82,15 @@ for f = 1:length(sacc_files)
     trial_start = ii_sacc.trial_start(broken);
     % get trial number based on where saccade criteria are met, and during
     % the wrong epoch
-    real_trial_start = unique(trial_start) + (12*(run-1)) + (120*(sess-1));
-    
-    % filter out saccades which are during okay periods
+    real_trial_start = unique(trial_start) + (12*(run-1)) + (ntrials_sess1*(sess-1));
     
     % get true trial number, accounting for n runs & n sessions
     saccade_flag(real_trial_start) = true;
     
 end
+
+
+real_trial_numbers = find(eye_data_exists);
 
 % for reference, XDAT TAGS:
 %1. Cue
@@ -87,7 +108,7 @@ if sum(subj==subjs_with_wrong_freq)>0
     downsample_flag = true; 
 end
 
-total_excluded = 0;
+excluded_trials = [];
 n_max_delay_samples = 6900;
 n_max_stim_samples = 3500;
 n_max_trial_samples = 8000;
@@ -99,8 +120,8 @@ if length(conditions) < ntrials
     conditions = [conditions; NaN(addon,2)];
     correct = [correct; NaN(addon,1)];
     correct_unedited = correct;
-elseif length(conditions) > ntrials % if there's more task data than pupil data (common)
-    conditions = conditions(1:ntrials,:); correct = correct(1:ntrials,:);
+% elseif length(conditions) > ntrials % if there's more task data than pupil data (common)
+%     conditions = conditions(1:ntrials,:); correct = correct(1:ntrials,:);
 end
 
 % initialize variables for trial-by-trial pupil size (delay period)
@@ -121,7 +142,7 @@ labels = {'delay','stim','trial'};
 all_delay_timecourses = [];
 all_stim_timecourses = [];
 
-for epoch = 1:2
+for epoch = 1:3
     % cycle over delay and stimulus period,
     % always use full trial timecourse for baselining etc.
     
@@ -132,7 +153,9 @@ for epoch = 1:2
 
     for tt = 1:ntrials %cycle over trials
         
-        if ~saccade_flag(tt) %no break from fixation
+        real_trial_num = real_trial_numbers(tt);
+        
+        if ~saccade_flag(real_trial_num) & correct(real_trial_num)==1 %no break from fixation and a correct trial
             
             relevant = sum(ii_sess.XDAT{tt}==tags(3,:),2)>0;
             
@@ -164,7 +187,8 @@ for epoch = 1:2
             % (INTERPOLATE NANs FROM BLINKS)
             size_filtered = clean_pupil_data(pupil_size,sample_Hz);
             % get this trial's data cleaned up
-            all_trial_timecourses = [all_trial_timecourses; conditions(tt,1) transpose(size_filtered) NaN(1,abs(length(size_filtered)-n_max_trial_samples))];
+            real_trial_number = real_trial_numbers(tt);
+            all_trial_timecourses = [all_trial_timecourses; conditions(real_trial_num,1) transpose(size_filtered) NaN(1,abs(length(size_filtered)-n_max_trial_samples))];
             
             % % RETHINK WHEN YOUR CONTRAST COMES FROM!
             % ITI doesn't seem appropriate for delay period contrast
@@ -188,7 +212,7 @@ for epoch = 1:2
             filtered_within_epoch = size_filtered(relevant);
             Y = [Y; filtered_within_epoch];
             eval(['all_' labels{epoch} '_timecourses = [all_' labels{epoch} '_timecourses; ' ...
-                'conditions(tt,1) transpose(filtered_within_epoch) ' ...
+                'conditions(real_trial_num,1) transpose(filtered_within_epoch) ' ...
                 'NaN(1,abs(length(filtered_within_epoch)-n_max_' labels{epoch} '_samples))];']);
             
             X_timecourse = interpnan_NT(ii_sess.X{tt}(relevant));
@@ -196,18 +220,22 @@ for epoch = 1:2
             
             condition_code = [-0.5 0.5];
             try
-                condition_for_model = condition_code(conditions(tt,1)).*ones(sum(relevant),1);
+                condition_for_model = condition_code(conditions(real_trial_num,1)).*ones(sum(relevant),1);
             catch
                 condition_for_model = NaN(sum(relevant),1);
             end
             model = [model; ones(sum(relevant),1) condition_for_model contrast.*ones(sum(relevant),1) X_timecourse Y_timecourse];
             
-            eval(['conditions_long_' labels{epoch} ' = [conditions_long_' labels{epoch} '; repmat(conditions(tt,1),sum(relevant),1)];'])
-            eval(['trials_long_' labels{epoch} ' = [trials_long_' labels{epoch} '; repmat(tt,sum(relevant),1)];'])
+            eval(['conditions_long_' labels{epoch} ' = [conditions_long_' labels{epoch} '; repmat(conditions(real_trial_num,1),sum(relevant),1)];'])
+            eval(['trials_long_' labels{epoch} ' = [trials_long_' labels{epoch} '; repmat(real_trial_num,sum(relevant),1)];'])
             
-        else % they broke from fixation at the wrong time, and in a substantive way
+        elseif saccade_flag(real_trial_num) & correct(real_trial_num) % they broke from fixation at the wrong time, and in a substantive way
             
-            total_excluded = total_excluded + 1;
+            if sum(excluded_trials==real_trial_num)==0
+                % don't double-count trials excluded when subjects break
+                % fixation
+                excluded_trials = [excluded_trials; real_trial_num];
+            end
             
         end % of saccade if statement
         
@@ -230,7 +258,25 @@ for epoch = 1:2
     
 end % of looping over epochs
 
-%% FURTHER PREPROCESS PUPIL DATA
+
+% %  model of AVERAGE pupillary response to easy/hard conditions
+t.delay_betas = delay_betas'; % pad with NaNs to standardize size across subjects
+t.stim_betas = stim_betas';
+
+% NOW, REMOVING ANY DIFFICULTY CONDITION FROM THE REGRESSION, MAKE
+% WHOLE-TRIAL TIMECOURSE:
+
+unique_trials = unique(trials_long_trial);
+all_trial_timecourses = [];
+for tii = 1:length(unique_trials)
+    
+    trial_num = unique_trials(tii);
+    trial_data = trial_residuals(trials_long_trial==trial_num,:)';
+    all_trial_timecourses = [all_trial_timecourses; conditions(trial_num,1) trial_data NaN(1,abs(length(trial_data)-n_max_trial_samples))];
+    
+end
+
+%% VISUALLY INSPECT AND SAVE CLEANED PUPIL DATA & REGRESSION RESULTS
 
 % PLOT WHAT THE CLEANED TIMECOURSE LOOKS LIKE NEXT TO THE ORIGINAL 
 % OPTIONAL PLOT
@@ -249,12 +295,7 @@ if plot_flag
 end
 
 
-valid_trials = unique(trials_long_delay);
-
-% % want to model response to easy/hard conditions
-t.delay_betas = delay_betas'; % pad with NaNs to standardize size across subjects
-
-t.stim_betas = stim_betas';
+valid_trials = unique(trials_long_trial);
 
 trial_indices = false(1,length(correct_unedited));
 trial_indices(valid_trials') = true; % no break from fixation
@@ -266,6 +307,8 @@ t.pupil_trial_indices = [trial_indices  false(1,240-length(trial_indices))];
 t.cleaned_pupilsize_by_trial{1} = all_trial_timecourses;
 t.cleaned_pupilsize_all_delays{1} = all_delay_timecourses;
 t.cleaned_pupilsize_all_stims{1} = all_stim_timecourses;
+
+total_excluded = length(excluded_trials);
 t.pct_excluded = total_excluded./ntrials;
 
 end
